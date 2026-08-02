@@ -11,8 +11,13 @@
       // mounts. This makes direct URLs and page refreshes work on GH Pages,
       // which has no server-side rewrite support. Not needed on Netlify/Vercel,
       // which handle SPA rewrites natively (see netlify.toml / vercel.json).
+      //
+      // The redirect target is the repo's Pages base path. Keep this in sync
+      // with the repo name / VITE_BASE_PATH used in .github/workflows/deploy.yml
+      // if the repository is ever renamed.
+      var pagesBase = '/nape-and-sons-plumbing/'
       var path = location.pathname + location.search + location.hash
-      location.replace('/?redirect=' + encodeURIComponent(path))
+      location.replace(pagesBase + '?redirect=' + encodeURIComponent(path))
     </script>
   </head>
   <body></body>
