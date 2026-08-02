@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { business } from '../data/business'
 
-const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://www.napeandsons.co.za'
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://napeandsonsplumbing.co.za'
 
 // Only known business information is included. Ratings, review counts, opening
 // hours, coordinates and price range are intentionally omitted until confirmed.

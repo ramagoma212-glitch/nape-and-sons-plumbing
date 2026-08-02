@@ -73,7 +73,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <Seo title="Admin Dashboard" description="Manage projects for Nape and Sons Plumbing & Projects." path="/admin/dashboard" />
+      <Seo title="Admin Dashboard" description="Manage projects for Nape and Sons Plumbing & Projects." path="/admin/dashboard" noindex />
 
       <div className="flex gap-2 border-b border-navy/10">
         {SECTIONS.map((section) => (

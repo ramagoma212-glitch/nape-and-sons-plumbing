@@ -1,23 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Static fallback only. The real sitemap is generated at build time by
+     scripts/generate-sitemap.mjs (see the "postbuild" script in
+     package.json), which overwrites this file in dist/ with the full set
+     of pages including project detail URLs. This copy exists only as a
+     safety net in case that script is ever skipped. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.napeandsons.co.za/</loc>
+    <loc>https://napeandsonsplumbing.co.za/</loc>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.napeandsons.co.za/about</loc>
+    <loc>https://napeandsonsplumbing.co.za/about</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.napeandsons.co.za/services</loc>
+    <loc>https://napeandsonsplumbing.co.za/services</loc>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.napeandsons.co.za/projects</loc>
+    <loc>https://napeandsonsplumbing.co.za/projects</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.napeandsons.co.za/contact</loc>
+    <loc>https://napeandsonsplumbing.co.za/contact</loc>
     <priority>0.9</priority>
   </url>
 </urlset>

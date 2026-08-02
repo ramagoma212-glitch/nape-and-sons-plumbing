@@ -5,11 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0B1F33" />
+    <!-- Title only — no static meta description here. Every route sets its
+         own via the Seo component (src/components/Seo.jsx / react-helmet-async).
+         A static description here would sit alongside Helmet's version
+         instead of being replaced by it (Helmet only manages tags it renders
+         itself), producing a duplicate <meta name="description"> in the DOM. -->
     <title>Nape and Sons Plumbing & Projects | Plumber Limpopo, Pretoria & Johannesburg</title>
-    <meta
-      name="description"
-      content="Reliable plumbing services across Limpopo, Pretoria and Johannesburg. Blocked drains, leak detection, geysers, pipe repairs and backup water systems. Call 079 380 2912."
-    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

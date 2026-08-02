@@ -56,7 +56,7 @@ export default function AdminLogin() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-navy px-5 py-16">
-      <Seo title="Admin Login" description="Admin login for Nape and Sons Plumbing & Projects." path="/admin" />
+      <Seo title="Admin Login" description="Admin login for Nape and Sons Plumbing & Projects." path="/admin" noindex />
 
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card-hover">
         <div className="flex flex-col items-center text-center">

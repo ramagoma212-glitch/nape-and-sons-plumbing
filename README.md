@@ -129,7 +129,7 @@ Until Supabase is configured, `/admin` shows a clear message instead of a broken
 - **Services list (Home + Services page):** edit `src/data/services.js`.
 - **Fallback/demo projects:** edit `src/data/projects.js` (used whenever Supabase has no rows, or isn't configured). Once you add real projects via the admin dashboard, those take priority automatically.
 - **Replacing/adding photos:** drop new images into `src/assets/projects/` with a descriptive filename, then reference them in `src/data/projects.js` — or upload directly via the admin dashboard once Supabase is connected. The original, unedited photos supplied for this project are archived in `original-photos/` (not used by the build).
-- **Site URL for SEO/canonical tags:** set `VITE_SITE_URL` in `.env` (defaults to a placeholder) and update `public/sitemap.xml` and `public/robots.txt` to match your real domain once known.
+- **Site URL for SEO/canonical tags:** the production domain is `https://napeandsonsplumbing.co.za` — this is already the code fallback (`src/components/Seo.jsx`, `src/components/LocalBusinessSchema.jsx`) and is baked into `public/robots.txt` and the sitemap generator. Setting `VITE_SITE_URL` in your hosting provider's environment variables overrides it per-environment if ever needed (e.g. a staging domain) but isn't required for production.
 
 ---
 
@@ -182,7 +182,7 @@ git push -u origin main
 
 - Supabase project + environment variables (site works without this, admin does not).
 - A real admin user (Section 5.4).
-- Real domain name — update `VITE_SITE_URL` env var, `public/sitemap.xml`, and `public/robots.txt`.
+- ~~Real domain name~~ — done: `napeandsonsplumbing.co.za` is registered and is the SEO code fallback, `robots.txt`, and sitemap generator's default. Still pending: connecting it in Netlify/DNS, and adding it to Supabase's Authentication redirect URL allow list once DNS is verified.
 - Google Maps: the Contact page links out to a Google Maps **search** for the address (no fixed coordinates were available). If you obtain exact coordinates or a Place ID later, this can be upgraded to an embedded map.
 - Compliance/certification wording on the Services page is intentionally generic until the business confirms exact accreditation details.
 - Customer reviews: the homepage currently shows a "What You Can Expect From Us" section instead of testimonials, since no verified reviews were supplied. Swap in real Google/customer reviews when available.

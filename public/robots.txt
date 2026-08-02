@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/dashboard
+Disallow: /admin/reset-password
 
-Sitemap: https://www.napeandsons.co.za/sitemap.xml
+Sitemap: https://napeandsonsplumbing.co.za/sitemap.xml

@@ -18,7 +18,7 @@ export default function Services() {
     <>
       <Seo
         title="Plumbing Services Limpopo, Pretoria & Johannesburg | Nape and Sons"
-        description="Plumbing solutions for homes, businesses and property projects across Limpopo, Pretoria and Johannesburg, including drains, leaks, geysers and pipe repairs."
+        description="Plumbing services for homes and businesses across Limpopo, Pretoria and Johannesburg — blocked drains, leak detection, geyser and solar geyser installations, bathroom plumbing and water tank installation."
         path="/services"
       />
 

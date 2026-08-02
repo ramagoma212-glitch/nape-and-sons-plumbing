@@ -88,6 +88,7 @@ export default function ResetPassword() {
         title="Reset Password"
         description="Reset your admin password for Nape and Sons Plumbing & Projects."
         path="/admin/reset-password"
+        noindex
       />
 
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card-hover">
