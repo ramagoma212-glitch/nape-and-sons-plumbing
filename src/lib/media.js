@@ -20,6 +20,21 @@ export const MEDIA_LIMITS = {
   },
 }
 
+const DEFAULT_EXTENSION = { image: 'jpg', video: 'mp4' }
+
+/** Derives a safe storage-path extension from an original filename. The
+ *  original name is never used as (or part of) the actual storage path —
+ *  only this sanitised extension is kept, and only alongside a random UUID
+ *  — so unusual characters, path separators or double extensions in a
+ *  customer/admin-supplied filename can't influence the resulting object
+ *  key. The actual file type accepted is still enforced server-side by the
+ *  bucket's allowed_mime_types, independent of this string. */
+export function sanitizeExtension(filename, mediaType) {
+  const raw = (filename || '').split('.').pop() || ''
+  const cleaned = raw.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5)
+  return cleaned || DEFAULT_EXTENSION[mediaType]
+}
+
 function classifyFile(file) {
   if (MEDIA_LIMITS.image.types.includes(file.type)) return 'image'
   if (MEDIA_LIMITS.video.types.includes(file.type)) return 'video'
@@ -66,7 +81,7 @@ export async function adminUploadMediaFile(file) {
 
   const { mediaType } = validation
   const bucket = MEDIA_LIMITS[mediaType].bucket
-  const extension = file.name.split('.').pop()
+  const extension = sanitizeExtension(file.name, mediaType)
   const path = `${crypto.randomUUID()}.${extension}`
 
   const { error } = await supabase.storage.from(bucket).upload(path, file, {

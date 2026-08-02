@@ -189,6 +189,32 @@ git push -u origin main
 
 ---
 
-## 10. Notes on Content Accuracy
+## 10. Security Headers
+
+`netlify.toml` sets these production headers on every route: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy` disabling camera/microphone/geolocation/payment (none of which this site uses). These are safe and non-breaking.
+
+**Content-Security-Policy is intentionally not applied yet.** A CSP strict enough to be worth adding would need, at minimum:
+
+```
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: https://*.supabase.co;
+  media-src 'self' https://*.supabase.co;
+  connect-src 'self' https://*.supabase.co;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self';
+```
+
+The two `'unsafe-inline'` entries are needed by two small existing things, not by the CSP itself: the GitHub Pages 404-redirect-restore `<script>` inline in `index.html` (`script-src`), and one inline `style={{ animationDelay }}` on the Projects page's filter animation (`style-src`). Both could be removed with a small refactor (moving the script to an external file, moving the animation delay to a CSS custom property) to tighten the policy further, but that wasn't done as part of a "just add headers" pass. Test this CSP against the real production domain (report-only mode first, via `Content-Security-Policy-Report-Only`) before enforcing it, since Supabase's storage/API domain needs to match exactly.
+
+**Strict-Transport-Security (HSTS) is also intentionally not set yet** — add it only once `https://napeandsonsplumbing.co.za` is confirmed serving valid HTTPS, since HSTS is difficult to safely undo if applied too early.
+
+---
+
+## 11. Notes on Content Accuracy
 
 Per the brief, this site avoids fabricating anything not supplied: no invented years of experience, staff counts, review counts, certifications, or company history. Where such information will eventually be available (compliance certificates, reviews), the relevant sections are built so real content can be dropped in without restructuring the page.

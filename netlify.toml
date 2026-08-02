@@ -6,3 +6,15 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Safe, non-breaking production security headers. No Content-Security-Policy
+# yet — see README for the fully audited CSP recommendation and why it isn't
+# applied automatically here. No Strict-Transport-Security yet either, since
+# the custom domain's HTTPS isn't confirmed live — add it once it is.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"

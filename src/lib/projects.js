@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { fallbackProjects } from '../data/projects'
-import { getProjectMediaMap, legacyMediaFor, adminDeleteAllProjectMedia } from './media'
+import { getProjectMediaMap, legacyMediaFor, adminDeleteAllProjectMedia, sanitizeExtension } from './media'
 
 const BUCKET = 'project-images'
 
@@ -90,7 +90,7 @@ export async function adminDeleteProject(id, imagePath) {
 
 export async function adminUploadProjectImage(file) {
   requireSupabase()
-  const extension = file.name.split('.').pop()
+  const extension = sanitizeExtension(file.name, 'image')
   const path = `${crypto.randomUUID()}.${extension}`
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: '3600',
