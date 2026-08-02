@@ -6,6 +6,8 @@ const AuthContext = createContext({
   loading: true,
   signIn: async () => ({ error: 'Supabase is not configured.' }),
   signOut: async () => {},
+  requestPasswordReset: async () => ({ error: 'Supabase is not configured.' }),
+  updatePassword: async () => ({ error: 'Supabase is not configured.' }),
 })
 
 export function AuthProvider({ children }) {
@@ -43,8 +45,30 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  // Deliberately does not reveal whether the email address has an account —
+  // Supabase's own resetPasswordForEmail already avoids that, and we mirror
+  // the same neutral outcome for any error here rather than surfacing it.
+  async function requestPasswordReset(email) {
+    if (!isSupabaseConfigured) {
+      return { error: 'Supabase is not configured. Add your environment variables first.' }
+    }
+    const redirectTo = `${window.location.origin}/admin/reset-password`
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    return { error: error?.message ?? null }
+  }
+
+  async function updatePassword(newPassword) {
+    if (!isSupabaseConfigured) {
+      return { error: 'Supabase is not configured. Add your environment variables first.' }
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    return { error: error?.message ?? null }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signOut, requestPasswordReset, updatePassword }}
+    >
       {children}
     </AuthContext.Provider>
   )

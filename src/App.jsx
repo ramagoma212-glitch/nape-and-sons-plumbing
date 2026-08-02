@@ -14,6 +14,7 @@ import NotFound from './pages/NotFound'
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const ResetPassword = lazy(() => import('./pages/admin/ResetPassword'))
 
 function Fallback() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
         </Route>
 
         <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/reset-password" element={<ResetPassword />} />
 
         <Route
           path="/admin/dashboard"
