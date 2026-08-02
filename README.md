@@ -215,6 +215,86 @@ The two `'unsafe-inline'` entries are needed by two small existing things, not b
 
 ---
 
-## 11. Notes on Content Accuracy
+## 11. Email Notification System (Prepared, Not Active)
+
+When a customer submits a Contact, Quote, or Booking form, the enquiry is saved to Supabase — that already works today. This section covers the **email side**: notifying the business at `napeandsons@gmail.com`, and confirming to the customer if they gave an email address. **This is built but intentionally not switched on yet.**
+
+### 11.1 Architecture
+
+```
+Customer submits form
+      ↓
+Supabase (public.enquiries INSERT)   ← already live; this is the source of truth
+      ↓
+Database Webhook (to be configured)
+      ↓
+Edge Function: send-enquiry-email    ← supabase/functions/send-enquiry-email/
+      ↓
+Resend (transactional email provider)
+      ↓
+napeandsons@gmail.com  +  the customer (if they gave an email)
+```
+
+The browser never talks to the email provider directly, and never sees its API key. The database insert is always the real "success" — email is a secondary, best-effort step that happens after the fact, server-side.
+
+### 11.2 Files
+
+- `supabase/functions/send-enquiry-email/index.ts` — the handler: validates the webhook payload, sends the business + customer emails, marks the row as notified.
+- `supabase/functions/send-enquiry-email/templates.ts` — pure HTML/plain-text template builders (business notification + 3 customer confirmation variants). No network code.
+- `supabase/functions/send-enquiry-email/email-provider.ts` — the only file that talks to Resend. Isolated so a different provider could be swapped in later without touching the templates or handler.
+- `supabase/migrations/007_enquiry_notification_tracking.sql` — optional additive migration (see 11.4).
+
+### 11.3 What the emails say
+
+**Business notification** (to `napeandsons@gmail.com`, Reply-To set to the customer's own email when given, so replying goes straight to them):
+- Subject: `New Contact Enquiry | Nape and Sons Plumbing` / `New Quote Request | ...` / `New Booking Request | ...`
+- Shows: Enquiry Type, Customer Name, Phone, Email, Service, Location, Message, and for bookings also Preferred Date/Time. Empty fields (e.g. no email given) are simply omitted, not shown blank.
+
+**Customer confirmation** (only sent if an email address was provided; Reply-To set to `napeandsons@gmail.com`):
+- Contact: "We have received your enquiry and will contact you regarding the details provided."
+- Quote: explicitly states **no price has been automatically approved**.
+- Booking: explicitly states **the date/time is not yet confirmed** — never claims a booking is confirmed.
+
+All three end with the phone/WhatsApp numbers for urgent matters, and are simple table-based HTML (for email client compatibility) with a plain-text fallback, in navy/white/gold matching the site.
+
+### 11.4 Duplicate-email protection
+
+`supabase/migrations/007_enquiry_notification_tracking.sql` adds a nullable `notification_sent_at` column. The Edge Function checks it before sending and sets it after a successful send, so a retried webhook delivery for the same row doesn't send the emails twice. **This migration is optional and not required to exist for anything else to work** — run it whenever you're ready to activate the webhook (step 8 below), not before.
+
+Tradeoff, by design rather than oversight: if the business email succeeds but the customer email then fails (or vice versa), the row isn't marked notified, and a webhook retry could resend the one that already succeeded once more. A fully duplicate-proof version would track business/customer status as two separate columns — not built now, to avoid overengineering a system that isn't active yet. Revisit only if duplicate emails turn out to be a real problem in practice.
+
+### 11.5 Failure and retry behaviour
+
+The enquiry is already durably saved before this function ever runs (the webhook fires after the insert commits) — so a failed or misconfigured email step **never loses a customer enquiry**. If the email provider isn't configured (no `RESEND_API_KEY` secret set) or a send fails, the function logs the real error server-side only (never to the customer) and returns a non-2xx status so Supabase's own built-in webhook retry (a limited number of automatic attempts with backoff) can retry transient failures — no custom retry queue was built, deliberately, to keep this simple.
+
+### 11.6 Activate once `napeandsonsplumbing.co.za` is live over HTTPS
+
+1. Create a transactional email provider account (Resend is the current recommendation; no account was created as part of this work).
+2. Add `napeandsonsplumbing.co.za` as a sending domain in that provider.
+3. Obtain the DNS verification records the provider gives you (these come from the real provider — nothing has been invented here).
+4. Add those DNS records at your domain registrar.
+5. Wait for the provider to verify the domain.
+6. Confirm the "From" address (`website@napeandsonsplumbing.co.za` or an equivalent professional sender) is usable once verified.
+7. Add the provider's API key as a Supabase secret — **never** in this repo, `.env.local`, or Netlify: `supabase secrets set RESEND_API_KEY=<real-key>`.
+8. Run migration `007_enquiry_notification_tracking.sql` (Section 11.4).
+9. Deploy the Edge Function: `supabase functions deploy send-enquiry-email`.
+10. Configure a Supabase **Database Webhook**: Table `public.enquiries`, event `INSERT`, target the deployed function's URL. (Database Webhooks are configured in the Supabase Dashboard under Database → Webhooks — no SQL required for this part.)
+11. Send controlled test enquiries through the real site and confirm both emails arrive correctly before considering this "live."
+
+### 11.7 Required secret
+
+| Name | Where it lives | Where it must NOT live |
+|---|---|---|
+| `RESEND_API_KEY` | Supabase Edge Function secret (`supabase secrets set`) | This repo, `.env.local`, Netlify environment variables, GitHub |
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are automatically available inside every Supabase Edge Function already — nothing to configure for those.
+
+### 11.8 Spam consideration
+
+The public forms already have a honeypot (Milestone 3A). Once real emails are flowing, automated form spam becomes email spam too, landing in your inbox and potentially the customer confirmation going to spammer-supplied addresses. Complete or strengthen anti-spam (e.g. Cloudflare Turnstile, deliberately not implemented yet) before or alongside activating this system — not required to prepare it, but recommended before switching it on for real.
+
+---
+
+## 12. Notes on Content Accuracy
 
 Per the brief, this site avoids fabricating anything not supplied: no invented years of experience, staff counts, review counts, certifications, or company history. Where such information will eventually be available (compliance certificates, reviews), the relevant sections are built so real content can be dropped in without restructuring the page.
