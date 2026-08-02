@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en-ZA">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0" />
+    <title>Nape and Sons Plumbing & Projects</title>
+    <script>
+      // GitHub Pages SPA fallback: encodes the requested path into a query
+      // string and redirects to index.html, where the inline script in
+      // index.html restores it via history.replaceState before React Router
+      // mounts. This makes direct URLs and page refreshes work on GH Pages,
+      // which has no server-side rewrite support. Not needed on Netlify/Vercel,
+      // which handle SPA rewrites natively (see netlify.toml / vercel.json).
+      var path = location.pathname + location.search + location.hash
+      location.replace('/?redirect=' + encodeURIComponent(path))
+    </script>
+  </head>
+  <body></body>
+</html>

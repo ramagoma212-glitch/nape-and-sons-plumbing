@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en-ZA">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B1F33" />
+    <title>Nape and Sons Plumbing & Projects | Plumber Limpopo, Pretoria & Johannesburg</title>
+    <meta
+      name="description"
+      content="Reliable plumbing services across Limpopo, Pretoria and Johannesburg. Blocked drains, leak detection, geysers, pipe repairs and backup water systems. Call 079 380 2912."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-offwhite text-ink font-body antialiased">
+    <div id="root"></div>
+    <script>
+      // Restores the real path after the GitHub Pages 404.html SPA redirect
+      // (see public/404.html). No-op on hosts with proper SPA rewrites.
+      (function () {
+        var params = new URLSearchParams(location.search)
+        var redirect = params.get('redirect')
+        if (redirect) {
+          history.replaceState(null, '', redirect)
+        }
+      })()
+    </script>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

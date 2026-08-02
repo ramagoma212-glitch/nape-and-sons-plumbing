@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading text-navy;
+  }
+
+  :focus-visible {
+    outline: 2px solid #D5A84B;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-6 py-3 text-sm font-semibold tracking-wide transition-all duration-200 focus-visible:outline-2 focus-visible:outline-gold;
+  }
+
+  .btn-primary {
+    @apply btn bg-gold text-navy hover:bg-gold-dark hover:-translate-y-0.5 shadow-card hover:shadow-card-hover;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-navy border border-navy/15 hover:border-gold hover:-translate-y-0.5;
+  }
+
+  .btn-outline-light {
+    @apply btn border border-white/40 text-white hover:bg-white hover:text-navy;
+  }
+
+  .btn-ghost {
+    @apply btn bg-navy text-white hover:bg-navy-light;
+  }
+
+  .section {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-dark;
+  }
+
+  .card {
+    @apply rounded-xl border border-navy/10 bg-white shadow-card transition-all duration-300;
+  }
+
+  .fade-up {
+    animation: fadeUp 0.6s ease-out both;
+  }
+}
