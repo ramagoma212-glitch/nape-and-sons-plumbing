@@ -26,6 +26,17 @@ export default function NotFound() {
             <ArrowLeft size={16} aria-hidden="true" />
             Back to Home
           </Link>
+          <p className="mt-6 text-sm text-ink/60">
+            Or visit{' '}
+            <Link to="/services" className="font-medium text-gold-dark underline">
+              Services
+            </Link>{' '}
+            or{' '}
+            <Link to="/contact" className="font-medium text-gold-dark underline">
+              Contact
+            </Link>
+            .
+          </p>
         </div>
       </section>
     </>

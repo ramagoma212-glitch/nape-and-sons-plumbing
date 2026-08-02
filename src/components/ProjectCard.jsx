@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Video } from 'lucide-react'
-import { getCoverMedia } from '../lib/media'
+import { getCoverMedia, getFocalPosition } from '../lib/media'
 
 export default function ProjectCard({ project, priority = false }) {
   const cover = getCoverMedia(project)
+  const focal = getFocalPosition(project)
 
   return (
     <Link
@@ -23,7 +24,7 @@ export default function ProjectCard({ project, priority = false }) {
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
             className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-              project.focal === 'top' ? 'object-top' : 'object-center'
+              focal === 'top' ? 'object-top' : 'object-center'
             }`}
           />
         )}

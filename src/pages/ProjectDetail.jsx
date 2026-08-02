@@ -5,7 +5,7 @@ import Seo from '../components/Seo'
 import CTASection from '../components/CTASection'
 import MediaGallery from '../components/MediaGallery'
 import { getProjectBySlug } from '../lib/projects'
-import { legacyMediaFor } from '../lib/media'
+import { legacyMediaFor, getFocalPosition } from '../lib/media'
 
 export default function ProjectDetail() {
   const { slug } = useParams()
@@ -48,6 +48,7 @@ export default function ProjectDetail() {
       ? [...project.media].sort((a, b) => a.display_order - b.display_order)
       : legacyMediaFor(project)
   const [hero, ...rest] = media
+  const focal = getFocalPosition(project)
 
   return (
     <>
@@ -88,7 +89,7 @@ export default function ProjectDetail() {
                 src={hero?.public_url || project.image_url}
                 alt={project.alt || project.title}
                 className={`max-h-[560px] w-full object-cover ${
-                  project.focal === 'top' ? 'object-top' : 'object-center'
+                  focal === 'top' ? 'object-top' : 'object-center'
                 }`}
                 loading="eager"
                 decoding="async"

@@ -147,6 +147,28 @@ export function legacyMediaFor(project) {
   ]
 }
 
+// A handful of real project photos have their main subject positioned
+// toward the top of the frame (a wall-mounted shower head, a roof-mounted
+// geyser/tank) rather than the centre, so a plain center-crop cuts it off.
+// This is a purely visual cropping hint, keyed by slug so it applies
+// whether a project's data comes from the local fallback dataset (which
+// carries a `focal` field) or from Supabase (whose `projects` table has no
+// such column — it's a frontend-only presentation detail, not real data).
+const TOP_FOCAL_SLUGS = new Set([
+  'modern-shower-installation',
+  'evacuated-tube-solar-geyser-installation',
+  'shower-installation',
+  'geyser-system-installation',
+  'residential-construction-project',
+])
+
+/** Returns 'top' or 'center' for object-position, regardless of whether the
+ *  project came from the local fallback data or Supabase. */
+export function getFocalPosition(project) {
+  if (project.focal) return project.focal
+  return TOP_FOCAL_SLUGS.has(project.slug) ? 'top' : 'center'
+}
+
 /** Resolves what a project card / hero should show as its cover. */
 export function getCoverMedia(project) {
   const media = project.media && project.media.length > 0 ? project.media : legacyMediaFor(project)

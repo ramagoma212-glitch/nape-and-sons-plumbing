@@ -106,7 +106,7 @@ export default function Contact() {
 
           <div className="lg:col-span-3">
             <div
-              className="flex flex-wrap gap-2"
+              className="flex flex-wrap justify-center gap-2"
               role="tablist"
               aria-label="Choose enquiry type"
             >
