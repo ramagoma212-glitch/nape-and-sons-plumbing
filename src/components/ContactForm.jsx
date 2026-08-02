@@ -14,6 +14,8 @@ const SERVICE_OPTIONS = [
   'Other',
 ]
 
+const TIME_OPTIONS = ['Morning', 'Afternoon', 'Any Time']
+
 const EMPTY_FORM = {
   fullName: '',
   phone: '',
@@ -21,9 +23,37 @@ const EMPTY_FORM = {
   service: '',
   location: '',
   message: '',
+  preferredDate: '',
+  preferredTime: '',
+  company: '', // honeypot — real visitors never see or fill this
 }
 
-function validate(form) {
+const COPY = {
+  contact: {
+    submitLabel: 'Send Message',
+    successTitle: 'Thank you',
+    successMessage:
+      'Your message has been received. Nape and Sons Plumbing & Projects will contact you regarding your enquiry.',
+  },
+  quote: {
+    submitLabel: 'Request a Quote',
+    successTitle: 'Thank you',
+    successMessage:
+      'Your request has been received. Nape and Sons Plumbing & Projects will contact you regarding your enquiry.',
+  },
+  booking: {
+    submitLabel: 'Request a Booking',
+    successTitle: 'Thank you',
+    successMessage:
+      'Your booking request has been received. Nape and Sons Plumbing & Projects will contact you to confirm the date and details.',
+  },
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function validate(form, enquiryType) {
   const errors = {}
   if (!form.fullName.trim()) errors.fullName = 'Please enter your full name.'
   if (!form.phone.trim()) errors.phone = 'Please enter a phone number.'
@@ -34,13 +64,24 @@ function validate(form) {
   if (!form.service) errors.service = 'Please select the service you need.'
   if (!form.location.trim()) errors.location = 'Please let us know your location.'
   if (!form.message.trim()) errors.message = 'Please add a short message describing the issue.'
+
+  if (enquiryType === 'booking') {
+    if (!form.preferredDate) {
+      errors.preferredDate = 'Please choose a preferred date.'
+    } else if (form.preferredDate < todayIso()) {
+      errors.preferredDate = 'Please choose a date that is not in the past.'
+    }
+    if (!form.preferredTime) errors.preferredTime = 'Please choose a preferred time.'
+  }
+
   return errors
 }
 
-export default function ContactForm() {
+export default function ContactForm({ enquiryType = 'quote' }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle') // idle | submitting | success | error
+  const copy = COPY[enquiryType] || COPY.quote
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -51,13 +92,23 @@ export default function ContactForm() {
     event.preventDefault()
     if (status === 'submitting') return
 
-    const validationErrors = validate(form)
+    // Honeypot: real visitors never see or fill this field. If it has a
+    // value, silently treat the submission as successful without ever
+    // touching the database, so automated bots get no signal that anything
+    // was rejected.
+    if (form.company.trim()) {
+      setStatus('success')
+      setForm(EMPTY_FORM)
+      return
+    }
+
+    const validationErrors = validate(form, enquiryType)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
     setStatus('submitting')
     try {
-      await submitEnquiry(form)
+      await submitEnquiry({ ...form, enquiryType })
       setStatus('success')
       setForm(EMPTY_FORM)
     } catch (error) {
@@ -72,11 +123,8 @@ export default function ContactForm() {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gold/15 text-gold-dark">
           <CheckCircle2 size={30} aria-hidden="true" />
         </div>
-        <h3 className="text-xl font-semibold text-navy font-heading">Thank you</h3>
-        <p className="text-ink/70">
-          Your request has been received. Nape and Sons Plumbing & Projects will contact you
-          regarding your enquiry.
-        </p>
+        <h3 className="text-xl font-semibold text-navy font-heading">{copy.successTitle}</h3>
+        <p className="text-ink/70">{copy.successMessage}</p>
         <button type="button" className="btn-secondary mt-2" onClick={() => setStatus('idle')}>
           Send another enquiry
         </button>
@@ -86,6 +134,21 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="card space-y-5 p-6 sm:p-8">
+      {/* Honeypot field: hidden from sighted users and unreachable by tab,
+          but visible to naive bots that auto-fill every input. */}
+      <div className="absolute left-[-9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+        <label htmlFor="company">Company</label>
+        <input
+          id="company"
+          name="company"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={form.company}
+          onChange={handleChange}
+        />
+      </div>
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Full Name" name="fullName" error={errors.fullName}>
           <input
@@ -155,6 +218,41 @@ export default function ContactForm() {
         </select>
       </Field>
 
+      {enquiryType === 'booking' && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Preferred Date" name="preferredDate" error={errors.preferredDate}>
+            <input
+              id="preferredDate"
+              name="preferredDate"
+              type="date"
+              min={todayIso()}
+              value={form.preferredDate}
+              onChange={handleChange}
+              className={inputClass(errors.preferredDate)}
+            />
+          </Field>
+
+          <Field label="Preferred Time" name="preferredTime" error={errors.preferredTime}>
+            <select
+              id="preferredTime"
+              name="preferredTime"
+              value={form.preferredTime}
+              onChange={handleChange}
+              className={inputClass(errors.preferredTime)}
+            >
+              <option value="" disabled>
+                Select a time
+              </option>
+              {TIME_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      )}
+
       <Field label="Message" name="message" error={errors.message}>
         <textarea
           id="message"
@@ -166,6 +264,12 @@ export default function ContactForm() {
         />
       </Field>
 
+      {enquiryType === 'booking' && (
+        <p className="text-xs text-ink/50">
+          This is a request only. We will contact you to confirm the date and time.
+        </p>
+      )}
+
       {status === 'error' && (
         <p role="alert" className="text-sm text-red-600">
           Something went wrong sending your enquiry. Please call or WhatsApp us directly.
@@ -174,7 +278,7 @@ export default function ContactForm() {
 
       <button type="submit" disabled={status === 'submitting'} className="btn-primary w-full sm:w-auto">
         {status === 'submitting' && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
-        {status === 'submitting' ? 'Sending...' : 'Request a Quote'}
+        {status === 'submitting' ? 'Sending...' : copy.submitLabel}
       </button>
     </form>
   )

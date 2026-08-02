@@ -87,7 +87,7 @@ export default function Footer() {
           <p>
             &copy; {year} {business.name}. All rights reserved.
           </p>
-          <p>Website built for Nape and Sons Plumbing &amp; Projects.</p>
+          <p>Built with 🩵 by Anani RM Digitals</p>
         </div>
       </div>
     </footer>

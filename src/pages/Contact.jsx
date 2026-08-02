@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Phone, MessageCircle, Mail, MapPin, ExternalLink } from 'lucide-react'
 import Seo from '../components/Seo'
 import PageHero from '../components/PageHero'
@@ -9,7 +10,16 @@ import { business } from '../data/business'
 const mapsQuery = encodeURIComponent(`${business.address}, Limpopo, South Africa`)
 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`
 
+const TABS = [
+  { type: 'contact', label: 'Contact Us', heading: 'Contact Us', description: 'Send us a message and we will get back to you.' },
+  { type: 'quote', label: 'Request a Quote', heading: 'Request a Quote', description: 'Fill in your details below and we will get back to you regarding your enquiry.' },
+  { type: 'booking', label: 'Request a Booking', heading: 'Request a Booking', description: 'Let us know when suits you best. This is a request only — we will contact you to confirm the date and time.' },
+]
+
 export default function Contact() {
+  const [activeTab, setActiveTab] = useState('contact')
+  const tab = TABS.find((item) => item.type === activeTab)
+
   return (
     <>
       <Seo
@@ -95,12 +105,36 @@ export default function Contact() {
           </div>
 
           <div className="lg:col-span-3">
-            <h2 className="text-lg font-semibold text-navy font-heading">Request a Quote</h2>
-            <p className="mt-2 text-sm text-ink/60">
-              Fill in your details below and we will get back to you regarding your enquiry.
-            </p>
+            <div
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Choose enquiry type"
+            >
+              {TABS.map((item) => {
+                const isActive = item.type === activeTab
+                return (
+                  <button
+                    key={item.type}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTab(item.type)}
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'border-gold bg-gold text-navy'
+                        : 'border-navy/15 bg-white text-navy/70 hover:border-gold/60'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            <h2 className="mt-6 text-lg font-semibold text-navy font-heading">{tab.heading}</h2>
+            <p className="mt-2 text-sm text-ink/60">{tab.description}</p>
             <div className="mt-6">
-              <ContactForm />
+              <ContactForm key={activeTab} enquiryType={activeTab} />
             </div>
           </div>
         </div>

@@ -42,18 +42,19 @@ The public site (Home, About, Services, Projects, Contact) works immediately aft
 ```
 src/
   assets/projects/   Real project photographs
-  components/        Reusable UI (Header, Footer, ContactForm, ProjectCard, etc.)
-  components/admin/  Admin-only components (ProjectForm)
+  components/        Reusable UI (Header, Footer, ContactForm, ProjectCard, MediaGallery, etc.)
+  components/admin/  Admin-only components (ProjectForm, MediaManager)
   data/               Business info, services list, fallback project data
   hooks/              useAuth (Supabase auth context), useScrollToHash
   layouts/            MainLayout (public site chrome), AdminLayout
-  lib/                supabaseClient, projects.js, enquiries.js, icons.jsx
+  lib/                supabaseClient, projects.js, media.js, enquiries.js, icons.jsx
   pages/              Route-level page components
   pages/admin/        AdminLogin, AdminDashboard
   sections/           Homepage section components
   styles/             Tailwind entry (index.css)
 supabase/
-  schema.sql          Full database + storage + RLS setup script
+  schema.sql               Base database + storage + RLS setup script
+  migrations/002_project_media.sql   Adds multi-image/video gallery support (run after schema.sql)
 public/               Static assets: robots.txt, sitemap.xml, favicon, 404.html
 ```
 
@@ -90,7 +91,15 @@ Open **Supabase → SQL Editor → New query**, paste the contents of [`supabase
 
 You do not need to guess at table fields — running this script is the complete setup.
 
-### 5.4 Create an admin account
+### 5.4 Project media (multiple photos + videos per project)
+After `schema.sql`, also run [`supabase/migrations/002_project_media.sql`](supabase/migrations/002_project_media.sql) in the SQL Editor. This is a purely additive migration — it does not touch `projects.image_url`/`image_path` — and adds:
+
+- `public.project_media` table (multiple images/videos per project, with `caption` and `display_order`), with the same RLS pattern: public read, authenticated-only write.
+- The `project-videos` storage bucket (public read, 50MB limit, MP4/WebM only), with matching storage policies. The limit is 50MB, not higher, because Supabase's Free plan enforces a 50MB per-file upload ceiling at the platform level regardless of bucket configuration — raise this only alongside a paid plan that supports larger uploads.
+
+The app works fine before this migration is run (every project simply falls back to its single legacy cover image); the admin dashboard's "Project Photos & Videos" section becomes usable once it's applied. If you're setting this up fresh, `002_project_media.sql` already creates the bucket at the correct 50MB limit; if you applied it before this note was added, also run `supabase/migrations/004_reduce_video_size_limit.sql`.
+
+### 5.5 Create an admin account
 Supabase Auth is used for the admin login (no self-registration is built into the site, by design).
 
 1. Go to **Supabase → Authentication → Users → Add user**.

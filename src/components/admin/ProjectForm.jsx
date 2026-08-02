@@ -7,6 +7,8 @@ import {
   adminUploadProjectImage,
   adminReplaceProjectImage,
 } from '../../lib/projects'
+import { adminAddProjectMedia } from '../../lib/media'
+import MediaManager from './MediaManager'
 
 const SELECTABLE_CATEGORIES = categories.filter((category) => category !== 'All')
 
@@ -18,8 +20,10 @@ function slugify(value) {
     .replace(/(^-|-$)/g, '')
 }
 
-export default function ProjectForm({ project, onSaved, onCancel }) {
-  const isEditing = Boolean(project)
+export default function ProjectForm({ project, onSaved, onFinish }) {
+  const [savedProject, setSavedProject] = useState(project ?? null)
+  const isEditing = Boolean(savedProject)
+
   const [title, setTitle] = useState(project?.title ?? '')
   const [slug, setSlug] = useState(project?.slug ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
@@ -53,21 +57,22 @@ export default function ProjectForm({ project, onSaved, onCancel }) {
       return
     }
     if (!isEditing && !file) {
-      setError('Please choose an image for this project.')
+      setError('Please choose a cover image for this project.')
       return
     }
 
     setSubmitting(true)
     try {
-      let imageUrl = project?.image_url
-      let imagePath = project?.image_path
+      let imageUrl = savedProject?.image_url
+      let imagePath = savedProject?.image_path
+      let uploadedNewCover = null
 
       if (file) {
-        const uploaded = isEditing
-          ? await adminReplaceProjectImage(file, project?.image_path)
+        uploadedNewCover = isEditing
+          ? await adminReplaceProjectImage(file, savedProject?.image_path)
           : await adminUploadProjectImage(file)
-        imageUrl = uploaded.url
-        imagePath = uploaded.path
+        imageUrl = uploadedNewCover.url
+        imagePath = uploadedNewCover.path
       }
 
       const payload = {
@@ -83,12 +88,30 @@ export default function ProjectForm({ project, onSaved, onCancel }) {
       }
 
       const saved = isEditing
-        ? await adminUpdateProject(project.id, payload)
+        ? await adminUpdateProject(savedProject.id, payload)
         : await adminCreateProject(payload)
 
-      onSaved(saved)
+      // Keep the new gallery system in sync: the cover image is also the
+      // first gallery item. If this fails (e.g. migration not run yet), the
+      // project itself is still saved fine via the legacy fields above.
+      if (!isEditing && uploadedNewCover) {
+        try {
+          await adminAddProjectMedia({
+            projectId: saved.id,
+            mediaType: 'image',
+            storagePath: uploadedNewCover.path,
+            publicUrl: uploadedNewCover.url,
+            displayOrder: 0,
+          })
+        } catch {
+          // Non-fatal — the project still works via the legacy image fields.
+        }
+      }
+
+      setSavedProject(saved)
+      setFile(null)
+      onSaved?.(saved)
     } catch (submitError) {
-      console.error(submitError)
       setError(submitError.message || 'Something went wrong saving this project.')
     } finally {
       setSubmitting(false)
@@ -96,104 +119,116 @@ export default function ProjectForm({ project, onSaved, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card space-y-5 p-6">
-      <div className="grid gap-5 sm:grid-cols-2">
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="card space-y-5 p-6">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-navy">Title</label>
+            <input
+              value={title}
+              onChange={(event) => handleTitleChange(event.target.value)}
+              className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-navy">Slug</label>
+            <input
+              value={slug}
+              onChange={(event) => {
+                setSlugTouched(true)
+                setSlug(slugify(event.target.value))
+              }}
+              className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-navy">Category</label>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+              className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
+            >
+              {SELECTABLE_CATEGORIES.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-navy">Display Order</label>
+            <input
+              type="number"
+              value={displayOrder}
+              onChange={(event) => setDisplayOrder(event.target.value)}
+              className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-navy">Title</label>
-          <input
-            value={title}
-            onChange={(event) => handleTitleChange(event.target.value)}
+          <label className="text-sm font-medium text-navy">Description</label>
+          <textarea
+            rows={3}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
             className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
-            required
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-navy">Slug</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-navy">Cover Image</label>
+          <p className="text-xs text-ink/50">
+            The main image shown on project cards. Add more photos and videos below once the project is saved.
+          </p>
+          {preview && (
+            <img src={preview} alt="Cover preview" className="h-40 w-full max-w-xs rounded-md object-cover" />
+          )}
+          <label className="btn-secondary w-fit cursor-pointer">
+            <Upload size={16} aria-hidden="true" />
+            {isEditing ? 'Replace Cover Image' : 'Upload Cover Image'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-navy">
           <input
-            value={slug}
-            onChange={(event) => {
-              setSlugTouched(true)
-              setSlug(slugify(event.target.value))
-            }}
-            className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
-            required
+            type="checkbox"
+            checked={featured}
+            onChange={(event) => setFeatured(event.target.checked)}
+            className="h-4 w-4 rounded border-navy/30"
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-navy">Category</label>
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
-          >
-            {SELECTABLE_CATEGORIES.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-navy">Display Order</label>
-          <input
-            type="number"
-            value={displayOrder}
-            onChange={(event) => setDisplayOrder(event.target.value)}
-            className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-navy">Description</label>
-        <textarea
-          rows={3}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          className="rounded-md border border-navy/15 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/50"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-navy">Project Image</label>
-        {preview && (
-          <img src={preview} alt="Project preview" className="h-40 w-full max-w-xs rounded-md object-cover" />
-        )}
-        <label className="btn-secondary w-fit cursor-pointer">
-          <Upload size={16} aria-hidden="true" />
-          {isEditing ? 'Replace Image' : 'Upload Image'}
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="hidden" />
+          Feature on homepage
         </label>
-      </div>
 
-      <label className="flex items-center gap-2 text-sm text-navy">
-        <input
-          type="checkbox"
-          checked={featured}
-          onChange={(event) => setFeatured(event.target.checked)}
-          className="h-4 w-4 rounded border-navy/30"
-        />
-        Feature on homepage
-      </label>
+        {error && (
+          <p role="alert" className="text-sm text-red-600">
+            {error}
+          </p>
+        )}
 
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
-        </p>
-      )}
+        <div className="flex gap-3">
+          <button type="submit" disabled={submitting} className="btn-primary">
+            {submitting && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
+            {submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Project'}
+          </button>
+          <button type="button" onClick={() => onFinish?.()} className="btn-secondary">
+            Close
+          </button>
+        </div>
+      </form>
 
-      <div className="flex gap-3">
-        <button type="submit" disabled={submitting} className="btn-primary">
-          {submitting && <Loader2 size={18} className="animate-spin" aria-hidden="true" />}
-          {submitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Project'}
-        </button>
-        <button type="button" onClick={onCancel} className="btn-secondary">
-          Cancel
-        </button>
-      </div>
-    </form>
+      {savedProject && <MediaManager projectId={savedProject.id} />}
+    </div>
   )
 }

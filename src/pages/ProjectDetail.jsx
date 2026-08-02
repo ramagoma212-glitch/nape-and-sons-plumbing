@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Seo from '../components/Seo'
 import CTASection from '../components/CTASection'
+import MediaGallery from '../components/MediaGallery'
 import { getProjectBySlug } from '../lib/projects'
+import { legacyMediaFor } from '../lib/media'
 
 export default function ProjectDetail() {
   const { slug } = useParams()
@@ -41,6 +43,12 @@ export default function ProjectDetail() {
     )
   }
 
+  const media =
+    project.media && project.media.length > 0
+      ? [...project.media].sort((a, b) => a.display_order - b.display_order)
+      : legacyMediaFor(project)
+  const [hero, ...rest] = media
+
   return (
     <>
       <Seo
@@ -65,16 +73,34 @@ export default function ProjectDetail() {
       <section className="bg-white pb-16 sm:pb-20">
         <div className="container-page -mt-4">
           <div className="overflow-hidden rounded-2xl shadow-card-hover">
-            <img
-              src={project.image_url}
-              alt={project.alt || project.title}
-              className={`max-h-[560px] w-full object-cover ${
-                project.focal === 'top' ? 'object-top' : 'object-center'
-              }`}
-              loading="eager"
-              decoding="async"
-            />
+            {hero?.media_type === 'video' ? (
+              <video
+                src={hero.public_url}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[560px] w-full object-cover"
+              >
+                Your browser does not support embedded video.
+              </video>
+            ) : (
+              <img
+                src={hero?.public_url || project.image_url}
+                alt={project.alt || project.title}
+                className={`max-h-[560px] w-full object-cover ${
+                  project.focal === 'top' ? 'object-top' : 'object-center'
+                }`}
+                loading="eager"
+                decoding="async"
+              />
+            )}
           </div>
+
+          {rest.length > 0 && (
+            <div className="mt-4">
+              <MediaGallery media={rest} projectTitle={project.title} />
+            </div>
+          )}
 
           <div className="mt-8 max-w-2xl">
             <span className="eyebrow">{project.category}</span>

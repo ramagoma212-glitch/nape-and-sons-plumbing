@@ -1,19 +1,32 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { fallbackProjects } from '../data/projects'
+import { getProjectMediaMap, legacyMediaFor, adminDeleteAllProjectMedia } from './media'
 
 const BUCKET = 'project-images'
 
-/** Fetches all projects, preferring Supabase and falling back to local data. */
+function withFallbackMedia(project) {
+  return { ...project, media: legacyMediaFor(project) }
+}
+
+/** Fetches all projects, preferring Supabase and falling back to local data.
+ *  Each project gets a `media` array attached: real project_media rows when
+ *  available, otherwise a single-item array synthesized from the legacy
+ *  image_url so the rest of the app can rely on `project.media` uniformly. */
 export async function getProjects() {
-  if (!isSupabaseConfigured) return fallbackProjects
+  if (!isSupabaseConfigured) return fallbackProjects.map(withFallbackMedia)
 
   const { data, error } = await supabase
     .from('projects')
     .select('*')
     .order('display_order', { ascending: true })
 
-  if (error || !data || data.length === 0) return fallbackProjects
-  return data
+  if (error || !data || data.length === 0) return fallbackProjects.map(withFallbackMedia)
+
+  const mediaMap = await getProjectMediaMap(data.map((project) => project.id))
+  return data.map((project) => {
+    const media = mediaMap.get(project.id)
+    return { ...project, media: media && media.length > 0 ? media : legacyMediaFor(project) }
+  })
 }
 
 export async function getProjectBySlug(slug) {
@@ -64,6 +77,10 @@ export async function adminUpdateProject(id, updates) {
 
 export async function adminDeleteProject(id, imagePath) {
   requireSupabase()
+  // Clean up gallery media (images + videos) first — the project_media rows
+  // themselves cascade-delete with the project, but their storage objects
+  // don't, so they'd otherwise be left behind as orphaned files.
+  await adminDeleteAllProjectMedia(id)
   if (imagePath) {
     await supabase.storage.from(BUCKET).remove([imagePath])
   }
