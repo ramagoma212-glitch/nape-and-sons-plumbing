@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react'
 import { business } from '../data/business'
 import { services } from '../data/services'
+import logo from '../assets/logo.png'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -10,8 +11,19 @@ export default function Footer() {
     <footer className="bg-navy-dark text-white/80">
       <div className="container-page section grid gap-10 sm:grid-cols-2 lg:grid-cols-4 !py-14">
         <div>
-          <span className="font-heading text-lg font-bold text-white">Nape and Sons</span>
-          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gold">Plumbing &amp; Projects</p>
+          <div className="flex items-center gap-3">
+            <img
+              src={logo}
+              alt="Nape and Sons Plumbing &amp; Projects logo"
+              width={40}
+              height={40}
+              className="h-10 w-10"
+            />
+            <span>
+              <span className="font-heading text-lg font-bold text-white">Nape and Sons</span>
+              <p className="text-xs uppercase tracking-[0.2em] text-gold">Plumbing &amp; Projects</p>
+            </span>
+          </div>
           <p className="mt-4 text-sm leading-relaxed text-white/60">
             Professional plumbing services for homes and businesses across Limpopo, Pretoria and
             Johannesburg.

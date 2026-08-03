@@ -16,6 +16,7 @@ export default function LocalBusinessSchema() {
     telephone: business.phoneHref.replace('tel:', ''),
     email: business.email,
     url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
     address: {
       '@type': 'PostalAddress',
       streetAddress: business.address,
