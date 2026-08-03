@@ -54,9 +54,9 @@ export default function Header() {
           <img
             src={logo}
             alt="Nape and Sons Plumbing &amp; Projects logo"
-            width={44}
-            height={44}
-            className="h-10 w-10 sm:h-11 sm:w-11"
+            width={56}
+            height={56}
+            className="h-12 w-12 sm:h-14 sm:w-14"
           />
           <span className="flex flex-col">
             <span className="font-heading text-lg sm:text-xl font-bold text-white">

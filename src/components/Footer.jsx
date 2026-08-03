@@ -15,9 +15,9 @@ export default function Footer() {
             <img
               src={logo}
               alt="Nape and Sons Plumbing &amp; Projects logo"
-              width={40}
-              height={40}
-              className="h-10 w-10"
+              width={48}
+              height={48}
+              className="h-12 w-12"
             />
             <span>
               <span className="font-heading text-lg font-bold text-white">Nape and Sons</span>
