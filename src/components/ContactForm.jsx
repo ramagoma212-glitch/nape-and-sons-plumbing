@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { CheckCircle2, Loader2 } from 'lucide-react'
-import { submitEnquiry } from '../lib/enquiries'
+import { submitEnquiry, isTurnstileConfigured } from '../lib/enquiries'
+import TurnstileWidget from './TurnstileWidget'
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY
 
 const SERVICE_OPTIONS = [
   'Blocked Drain',
@@ -81,11 +84,23 @@ export default function ContactForm({ enquiryType = 'quote' }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [status, setStatus] = useState('idle') // idle | submitting | success | error
+  const [errorMessage, setErrorMessage] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState(null)
+  const [turnstileMessage, setTurnstileMessage] = useState('')
+  const turnstileRef = useRef(null)
   const copy = COPY[enquiryType] || COPY.quote
 
   function handleChange(event) {
     const { name, value } = event.target
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  function resetTurnstile() {
+    // A Turnstile token is single-use — always force a fresh one after any
+    // submit attempt, whether it succeeded or failed, and never keep the
+    // spent token around (not stored in localStorage either).
+    setTurnstileToken(null)
+    turnstileRef.current?.reset()
   }
 
   async function handleSubmit(event) {
@@ -106,14 +121,25 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
+    if (isTurnstileConfigured && !turnstileToken) {
+      setTurnstileMessage('Please complete the security check and try again.')
+      return
+    }
+
+    setTurnstileMessage('')
     setStatus('submitting')
     try {
-      await submitEnquiry({ ...form, enquiryType })
+      await submitEnquiry({ ...form, enquiryType, turnstileToken })
       setStatus('success')
       setForm(EMPTY_FORM)
+      resetTurnstile()
     } catch (error) {
       console.error(error)
+      setErrorMessage(
+        error?.message || 'Something went wrong sending your enquiry. Please call or WhatsApp us directly.',
+      )
       setStatus('error')
+      resetTurnstile()
     }
   }
 
@@ -270,9 +296,35 @@ export default function ContactForm({ enquiryType = 'quote' }) {
         </p>
       )}
 
+      {isTurnstileConfigured && (
+        <div>
+          <TurnstileWidget
+            ref={turnstileRef}
+            siteKey={TURNSTILE_SITE_KEY}
+            onVerify={(token) => {
+              setTurnstileToken(token)
+              setTurnstileMessage('')
+            }}
+            onExpire={() => {
+              setTurnstileToken(null)
+              setTurnstileMessage('Security verification expired. Please try again.')
+            }}
+            onError={() => {
+              setTurnstileToken(null)
+              setTurnstileMessage('Please complete the security check and try again.')
+            }}
+          />
+          {turnstileMessage && (
+            <p role="alert" className="mt-2 text-sm text-red-600">
+              {turnstileMessage}
+            </p>
+          )}
+        </div>
+      )}
+
       {status === 'error' && (
         <p role="alert" className="text-sm text-red-600">
-          Something went wrong sending your enquiry. Please call or WhatsApp us directly.
+          {errorMessage || 'Something went wrong sending your enquiry. Please call or WhatsApp us directly.'}
         </p>
       )}
 

@@ -186,6 +186,7 @@ git push -u origin main
 - Google Maps: the Contact page links out to a Google Maps **search** for the address (no fixed coordinates were available). If you obtain exact coordinates or a Place ID later, this can be upgraded to an embedded map.
 - Compliance/certification wording on the Services page is intentionally generic until the business confirms exact accreditation details.
 - Customer reviews: the homepage currently shows a "What You Can Expect From Us" section instead of testimonials, since no verified reviews were supplied. Swap in real Google/customer reviews when available.
+- Email notifications (Section 11) and Turnstile anti-spam (Section 12) are both fully prepared but intentionally inactive — see those sections for the exact activation steps.
 
 ---
 
@@ -295,6 +296,111 @@ The public forms already have a honeypot (Milestone 3A). Once real emails are fl
 
 ---
 
-## 12. Notes on Content Accuracy
+## 12. Turnstile Anti-Spam (Prepared, Not Active)
+
+Contact, Quote and Booking currently save straight to `public.enquiries` from the browser, with a honeypot as the only anti-spam layer. This section adds real server-side verification — **built but intentionally not switched on yet**, exactly like the email system in Section 11.
+
+### 12.1 Architecture
+
+```
+Customer submits form
+      ↓
+Honeypot check (client-side, unchanged)
+      ↓
+Cloudflare Turnstile token (client-side widget)
+      ↓
+Supabase Edge Function: submit-enquiry
+      ↓
+Server-side Cloudflare Siteverify
+      ↓
+Supabase enquiries INSERT (using the service-role key, inside the function)
+      ↓
+Database success response
+```
+
+The browser never talks to Cloudflare's verification endpoint directly, and never sees `TURNSTILE_SECRET_KEY`. `submit-enquiry` inserts into the exact same `public.enquiries` table the prepared (still inactive) `send-enquiry-email` webhook watches, so that system remains fully compatible once both are switched on — `submit-enquiry` never calls Resend itself.
+
+### 12.2 Files
+
+- `supabase/functions/submit-enquiry/index.ts` — the handler: honeypot short-circuit, validation, Turnstile verification, insert.
+- `supabase/functions/submit-enquiry/validation.ts` — request shape/type/length validation, mirroring the constraints already in `006_enquiry_types_and_booking.sql`.
+- `supabase/functions/submit-enquiry/turnstile.ts` — the Cloudflare Siteverify call, plus hostname/action checks.
+- `supabase/functions/submit-enquiry/cors.ts` — a small explicit origin allowlist (production domain + local dev ports), not a wildcard.
+- `supabase/migrations/008_secure_enquiry_submission.sql` — removes the anonymous direct-INSERT policy on `enquiries`. **Not run yet — see 12.6.**
+- `src/components/TurnstileWidget.jsx` — thin wrapper that loads Cloudflare's script once and renders the widget in explicit mode, exposing `reset()` via ref (a token is single-use and must never be resent).
+- `src/lib/enquiries.js` — `submitEnquiry` now branches on `isTurnstileConfigured`.
+- `src/components/ContactForm.jsx` — renders the widget and handles verified/expired/error states when Turnstile is configured; unchanged otherwise.
+
+### 12.3 The activation switch: `VITE_TURNSTILE_SITE_KEY`
+
+Rather than requiring a second, carefully-timed frontend deploy to "switch over," the frontend behaviour is driven entirely by whether `VITE_TURNSTILE_SITE_KEY` is set at build time:
+
+- **Not set (current production state):** no widget renders, `submitEnquiry` inserts directly into `enquiries` exactly as it does today. Merging and deploying this milestone's code changes nothing about how the live site behaves.
+- **Set:** the widget renders, a token is required before submit, and `submitEnquiry` calls `submit-enquiry` instead of inserting directly.
+
+This means the only action that flips the frontend over is adding the environment variable in Netlify and letting it redeploy — no follow-up code change needed, and no risk of forgetting to "deploy the new frontend" as a separate step.
+
+### 12.4 Required secrets/variables
+
+| Name | Where it lives | Where it must NOT live |
+|---|---|---|
+| `VITE_TURNSTILE_SITE_KEY` | Public. Netlify environment variables (and `.env.local` for local testing) | N/A — this one is meant to be public and ships in the browser bundle |
+| `TURNSTILE_SECRET_KEY` | Supabase Edge Function secret (`supabase secrets set`) | This repo, `.env.local`, Netlify, GitHub, `.env.example` (as a real value), the React bundle |
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are automatically available inside every Supabase Edge Function already — nothing to configure for those.
+
+### 12.5 Cloudflare manual setup (you do this — nothing here does it automatically)
+
+1. Create or sign in to a Cloudflare account.
+2. Open **Turnstile** in the dashboard.
+3. **Add a widget.**
+4. Widget name: `Nape and Sons Website`.
+5. Hostname: `napeandsonsplumbing.co.za`.
+6. Widget mode: **Managed**.
+7. Obtain the **Site Key** and **Secret Key**.
+8. Site Key → Netlify → Site settings → Environment variables → `VITE_TURNSTILE_SITE_KEY`.
+9. Secret Key → Supabase → `supabase secrets set TURNSTILE_SECRET_KEY=<real-secret>` (or Dashboard → Edge Functions → Secrets). Never paste it anywhere else.
+
+### 12.6 Activation sequence (zero-downtime)
+
+The recommended order, and why:
+
+1. Create the Cloudflare widget (12.5).
+2. Set `TURNSTILE_SECRET_KEY` as a Supabase Edge Function secret.
+3. Deploy the function: `supabase functions deploy submit-enquiry`.
+4. Test the deployed function directly (e.g. `curl`/Postman) using Cloudflare's dummy testing sitekey/secret pair (12.7) before touching Netlify at all — this confirms validation, Turnstile verification and the insert all work while production traffic is completely unaffected (the frontend is still doing direct inserts at this point).
+5. Add `VITE_TURNSTILE_SITE_KEY` (the **real** one from 12.5) to Netlify and let it redeploy. The frontend now renders the widget and calls `submit-enquiry` — safe, because step 3 already confirmed the function exists and works.
+6. Submit real test enquiries through the live site (all three forms) and confirm they land in `public.enquiries` with `status = 'new'`.
+7. Only now run `supabase/migrations/008_secure_enquiry_submission.sql` in the SQL editor, removing the anonymous direct-INSERT policy.
+8. Re-test all three forms once more after the migration, confirming they still succeed (they should — they no longer depend on that policy at all, since `submit-enquiry` writes with the service-role key).
+
+The reason this is safe: steps 1-4 touch nothing production-facing (no Netlify change, no migration). Step 5 is the only moment the live frontend changes behaviour, and by then the function has already been deployed and tested in isolation. Step 7 (the only irreversible-ish step, since it removes a policy) happens last, after real submissions through the real UI are already confirmed working — at that point removing the anonymous policy changes nothing observable, it just closes the bypass.
+
+### 12.7 Testing without production credentials
+
+Cloudflare publishes fixed dummy sitekey/secret pairs for exactly this purpose — safe to use in `.env.local` and for the `curl` test in step 4 above, never in production:
+
+| Purpose | Sitekey | Secret |
+|---|---|---|
+| Always passes (visible widget) | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
+| Always blocks | `2x00000000000000000000AB` | `2x0000000000000000000000000000000AA` |
+| Always passes (invisible) | `1x00000000000000000000BB` | (use the "always passes" secret above) |
+| Forces an interactive challenge | `3x00000000000000000000FF` | `3x0000000000000000000000000000000AA` (reports "already spent" on reuse — useful for testing replay rejection) |
+
+### 12.8 Rate limiting — assessed, not built
+
+Turnstile + honeypot are the primary anti-spam layer here. A per-IP or per-token rate limiter inside `submit-enquiry` was deliberately **not built**: Supabase Edge Functions are stateless and can run across multiple regions/instances, so an in-memory counter would be trivially inconsistent and give a false sense of protection. A real rate limit needs shared state — e.g. a small Postgres table tracking submission counts per IP/time window (queried from inside the function), or Cloudflare's own rate-limiting rules if the domain is ever proxied through Cloudflare's edge network. Either is a reasonable follow-up but is additional infrastructure, not something to fake here.
+
+### 12.9 CORS
+
+`submit-enquiry` responds with `Access-Control-Allow-Origin` only for an explicit allowlist (`https://napeandsonsplumbing.co.za`, plus local dev ports `5173`/`4173`) rather than a wildcard — a small, known set of legitimate callers, so there's no reason to widen it. Even if it were wildcarded, Turnstile verification and server-side validation remain the actual security boundary; CORS only affects which *browsers* will let a page call this endpoint, not what the endpoint itself accepts.
+
+### 12.10 Privacy
+
+`submit-enquiry` never logs `full_name`, `phone`, `email`, `message`, or the Turnstile token in normal operation. Server-side logs are limited to generic reason codes (e.g. `invalid_email`, `preferred_date_in_past`) and Cloudflare's own Siteverify error codes — enough to diagnose a misconfiguration without exposing a single customer's data.
+
+---
+
+## 13. Notes on Content Accuracy
 
 Per the brief, this site avoids fabricating anything not supplied: no invented years of experience, staff counts, review counts, certifications, or company history. Where such information will eventually be available (compliance certificates, reviews), the relevant sections are built so real content can be dropped in without restructuring the page.
