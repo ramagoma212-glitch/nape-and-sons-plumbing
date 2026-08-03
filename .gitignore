@@ -12,3 +12,7 @@ npm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI's local project-link cache — machine-specific, regenerated
+# by `supabase link`, not meant to be version controlled.
+supabase/.temp

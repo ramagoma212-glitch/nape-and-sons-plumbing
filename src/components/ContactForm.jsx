@@ -161,17 +161,30 @@ export default function ContactForm({ enquiryType = 'quote' }) {
   return (
     <form onSubmit={handleSubmit} noValidate className="card space-y-5 p-6 sm:p-8">
       {/* Honeypot field: hidden from sighted users and unreachable by tab,
-          but visible to naive bots that auto-fill every input. */}
+          but visible to naive bots that auto-fill every input. The field's
+          name/id is deliberately non-semantic (no "company", "organization",
+          "name", "website" etc.) and carries no <label> — real browsers'
+          autofill (e.g. Chrome's saved "Organization" value) matches fields
+          by exactly that kind of semantic name/label, not by whether the
+          field is visually on-screen, so a recognisable name here was
+          silently autofilling this field for real human visitors and
+          triggering the bot-trap's fake-success path on their genuine
+          submissions. See git history for the incident this fixed. */}
       <div className="absolute left-[-9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
-        <label htmlFor="company">Company</label>
         <input
-          id="company"
-          name="company"
+          id="nape_hp_1x9"
+          name="nape_hp_1x9"
           type="text"
           tabIndex={-1}
           autoComplete="off"
+          data-lpignore="true"
+          data-form-type="other"
           value={form.company}
-          onChange={handleChange}
+          // Deliberately not the shared handleChange: that keys off
+          // event.target.name (the DOM attribute renamed above to avoid
+          // autofill), and this must keep writing to the `company` state
+          // key regardless of what the DOM name is.
+          onChange={(event) => setForm((prev) => ({ ...prev, company: event.target.value }))}
         />
       </div>
 
