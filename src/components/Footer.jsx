@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react'
 import { business } from '../data/business'
 import { services } from '../data/services'
-import logo from '../assets/logo.png'
+import logo from '../assets/brand/nape-and-sons-logo.png'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -15,9 +15,9 @@ export default function Footer() {
             <img
               src={logo}
               alt="Nape and Sons Plumbing &amp; Projects logo"
-              width={48}
-              height={48}
-              className="h-12 w-12"
+              width={64}
+              height={64}
+              className="h-16 w-16 shrink-0 object-contain"
             />
             <span>
               <span className="font-heading text-lg font-bold text-white">Nape and Sons</span>

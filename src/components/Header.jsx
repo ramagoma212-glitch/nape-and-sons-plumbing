@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, Phone } from 'lucide-react'
 import { business } from '../data/business'
-import logo from '../assets/logo.png'
+import logo from '../assets/brand/nape-and-sons-logo.png'
 
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
@@ -54,9 +54,9 @@ export default function Header() {
           <img
             src={logo}
             alt="Nape and Sons Plumbing &amp; Projects logo"
-            width={56}
-            height={56}
-            className="h-12 w-12 sm:h-14 sm:w-14"
+            width={68}
+            height={68}
+            className="h-14 w-14 shrink-0 object-contain sm:h-[68px] sm:w-[68px]"
           />
           <span className="flex flex-col">
             <span className="font-heading text-lg sm:text-xl font-bold text-white">
