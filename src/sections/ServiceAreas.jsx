@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { business } from '../data/business'
 
@@ -12,11 +13,12 @@ export default function ServiceAreas() {
           </h2>
           <p className="mt-5 text-base sm:text-lg text-white/75">
             Nape and Sons Plumbing &amp; Projects provides plumbing services to residential and
-            commercial customers across Limpopo, Pretoria and Johannesburg.
+            commercial customers in Polokwane and surrounding areas in Limpopo, Pretoria and
+            Johannesburg.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {business.areas.map((area) => (
             <div
               key={area}
@@ -27,6 +29,12 @@ export default function ServiceAreas() {
             </div>
           ))}
         </div>
+
+        <p className="mt-8 text-center text-sm text-white/60">
+          <Link to="/plumber-polokwane" className="font-medium text-gold hover:underline">
+            Learn more about our plumbing services in Polokwane
+          </Link>
+        </p>
       </div>
     </section>
   )

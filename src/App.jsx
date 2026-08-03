@@ -12,6 +12,7 @@ import Contact from './pages/Contact'
 import NotFound from './pages/NotFound'
 
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
+const PlumberPolokwane = lazy(() => import('./pages/PlumberPolokwane'))
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const ResetPassword = lazy(() => import('./pages/admin/ResetPassword'))
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:slug" element={<ProjectDetail />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/plumber-polokwane" element={<PlumberPolokwane />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 

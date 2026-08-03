@@ -18,15 +18,23 @@ export default function Services() {
     <>
       <Seo
         title="Plumbing Services Limpopo, Pretoria & Johannesburg | Nape and Sons"
-        description="Plumbing services for homes and businesses across Limpopo, Pretoria and Johannesburg — blocked drains, leak detection, geyser and solar geyser installations, bathroom plumbing and water tank installation."
+        description="Plumbing services for homes and businesses in Polokwane and across Limpopo, Pretoria and Johannesburg — blocked drains, leak detection, geyser and solar geyser installations, bathroom plumbing and water tank installation."
         path="/services"
       />
 
       <PageHero
         eyebrow="What We Do"
         title="Professional Plumbing Services"
-        description="Plumbing solutions for homes, businesses and property projects across Limpopo, Pretoria and Johannesburg."
+        description="Plumbing solutions for homes, businesses and property projects across Polokwane, Limpopo, Pretoria and Johannesburg."
       />
+
+      <section className="bg-white pt-8 text-center">
+        <p className="text-sm text-ink/60">
+          <Link to="/plumber-polokwane" className="font-medium text-gold-dark underline">
+            See our dedicated Polokwane plumbing services page
+          </Link>
+        </p>
+      </section>
 
       <section className="section bg-white">
         <div className="container-page">

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { CheckCircle2, MapPin } from 'lucide-react'
 import Seo from '../components/Seo'
 import PageHero from '../components/PageHero'
@@ -20,7 +21,7 @@ export default function About() {
     <>
       <Seo
         title="About Nape and Sons Plumbing & Projects"
-        description="Nape and Sons Plumbing & Projects provides plumbing and project services for residential and commercial customers across Limpopo, Pretoria and Johannesburg."
+        description="Nape and Sons Plumbing & Projects, also known to many customers as Brain Plumber, provides plumbing and project services for residential and commercial customers in Polokwane and across Limpopo, Pretoria and Johannesburg."
         path="/about"
       />
 
@@ -44,6 +45,10 @@ export default function About() {
             <p className="mt-4 text-base leading-relaxed text-ink/70">
               Our work is centred on practical, reliable plumbing solutions delivered with
               professionalism and clear communication.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-ink/70">
+              Nape and Sons Plumbing &amp; Projects is also known to many customers in the area as{' '}
+              <strong className="font-semibold text-navy">Brain Plumber</strong>.
             </p>
           </div>
           <div className="aspect-[4/3] overflow-hidden rounded-2xl shadow-card-hover">
@@ -111,10 +116,10 @@ export default function About() {
           <SectionHeading
             eyebrow="Where We Work"
             title="Areas We Serve"
-            description="Nape and Sons Plumbing & Projects provides plumbing services to residential and commercial customers across Limpopo, Pretoria and Johannesburg."
+            description="Nape and Sons Plumbing & Projects provides plumbing services to residential and commercial customers in Polokwane and surrounding areas in Limpopo, Pretoria and Johannesburg."
             light
           />
-          <div className="mt-10 grid gap-5 sm:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {business.areas.map((area) => (
               <div
                 key={area}
@@ -125,6 +130,11 @@ export default function About() {
               </div>
             ))}
           </div>
+          <p className="mt-8 text-center text-sm text-white/60">
+            <Link to="/plumber-polokwane" className="font-medium text-gold hover:underline">
+              See our Polokwane plumbing services
+            </Link>
+          </p>
         </div>
       </section>
 

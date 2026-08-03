@@ -24,6 +24,7 @@ const STATIC_PAGES = [
   { path: '/services', priority: '0.9' },
   { path: '/projects', priority: '0.8' },
   { path: '/contact', priority: '0.9' },
+  { path: '/plumber-polokwane', priority: '0.9' },
 ]
 
 const PROJECT_DATA_FILE = fileURLToPath(new URL('../src/data/projects.js', import.meta.url))

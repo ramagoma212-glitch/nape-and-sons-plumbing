@@ -10,6 +10,9 @@ export default function LocalBusinessSchema() {
     '@context': 'https://schema.org',
     '@type': 'Plumber',
     name: business.name,
+    // Genuinely used by customers to refer to this business — not invented
+    // for SEO purposes. See src/data/business.js.
+    alternateName: business.alternateName,
     telephone: business.phoneHref.replace('tel:', ''),
     email: business.email,
     url: SITE_URL,
