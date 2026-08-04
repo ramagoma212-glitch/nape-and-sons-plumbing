@@ -1,8 +1,13 @@
 name: Deploy to GitHub Pages
 
+# Manual-only. This used to also trigger on every push to main, which meant
+# every production deploy silently published a second, Supabase-less
+# "fallback" copy of the site at this repo's github.io URL alongside the
+# real napeandsonsplumbing.co.za deployment on Netlify — duplicate content
+# competing with the canonical domain. The custom domain is the only
+# canonical public site; run this manually (Actions tab → this workflow →
+# "Run workflow") only if GitHub Pages is deliberately needed again.
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 permissions:
