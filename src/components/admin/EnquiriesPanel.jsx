@@ -84,7 +84,12 @@ export default function EnquiriesPanel() {
       {enquiries.length === 0 ? (
         <div className="card p-10 text-center text-ink/60">No enquiries yet.</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-navy/10 bg-white">
+        <>
+        {/* Tablet/desktop: table. Reaching Status/Actions here requires
+            scrolling the table sideways (min-w-[720px]) — acceptable at
+            tablet+ widths, but not the "drag a giant table" experience we
+            want on a phone, which gets its own card layout below. */}
+        <div className="hidden overflow-x-auto rounded-xl border border-navy/10 bg-white md:block">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-navy/10 bg-navy/5 text-xs uppercase tracking-wide text-navy/60">
               <tr>
@@ -181,6 +186,97 @@ export default function EnquiriesPanel() {
             </tbody>
           </table>
         </div>
+
+        {/* Phone: stacked cards. Status is a full-width select (the main
+            thing an owner needs to change day-to-day), with expand/delete
+            as small icon buttons that stay visible without any sideways
+            scrolling. */}
+        <div className="grid grid-cols-1 gap-3 md:hidden">
+          {enquiries.map((enquiry) => {
+            const isExpanded = expandedId === enquiry.id
+            return (
+              <div key={enquiry.id} className="card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-navy">{enquiry.full_name}</p>
+                    <p className="mt-0.5 text-xs uppercase tracking-wide text-gold-dark">
+                      {TYPE_LABELS[enquiry.enquiry_type] || enquiry.enquiry_type}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(isExpanded ? null : enquiry.id)}
+                      className="rounded-md p-2 text-navy/70 hover:bg-navy/5 hover:text-navy"
+                      aria-label={isExpanded ? 'Hide details' : 'View details'}
+                    >
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(enquiry)}
+                      disabled={deletingId === enquiry.id}
+                      className="rounded-md p-2 text-red-500 hover:bg-red-50"
+                      aria-label={`Delete enquiry from ${enquiry.full_name}`}
+                    >
+                      {deletingId === enquiry.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1 text-sm text-ink/70">
+                  <p className="truncate">{enquiry.service}</p>
+                  <p className="truncate">
+                    {enquiry.phone}
+                    {enquiry.email && <span className="text-ink/50"> · {enquiry.email}</span>}
+                  </p>
+                  <p className="text-xs text-ink/50">
+                    Received {formatDate(enquiry.created_at)}
+                    {enquiry.preferred_date && (
+                      <>
+                        {' '}
+                        · Preferred {formatDate(enquiry.preferred_date)}
+                        {enquiry.preferred_time && ` (${enquiry.preferred_time})`}
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-3 rounded-md bg-offwhite/60 p-3 text-sm text-ink/80">
+                    <p>
+                      <span className="font-medium text-navy">Location:</span> {enquiry.location}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap">
+                      <span className="font-medium text-navy">Message:</span> {enquiry.message}
+                    </p>
+                  </div>
+                )}
+
+                <label className="mt-3 flex flex-col gap-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-navy/60">Status</span>
+                  <select
+                    value={enquiry.status}
+                    disabled={updatingId === enquiry.id}
+                    onChange={(event) => handleStatusChange(enquiry, event.target.value)}
+                    className="w-full rounded-md border border-navy/15 px-3 py-2 text-sm capitalize focus:outline-none focus:ring-1 focus:ring-gold/50"
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+        </>
       )}
     </div>
   )

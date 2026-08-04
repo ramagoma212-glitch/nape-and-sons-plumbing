@@ -134,64 +134,124 @@ export default function AdminDashboard() {
                 No projects yet. Click &quot;New Project&quot; to add your first one.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-navy/10 bg-white">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-navy/10 bg-navy/5 text-xs uppercase tracking-wide text-navy/60">
-                    <tr>
-                      <th className="px-4 py-3">Image</th>
-                      <th className="px-4 py-3">Title</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Order</th>
-                      <th className="px-4 py-3">Featured</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-navy/5">
-                    {projects.map((project) => (
-                      <tr key={project.id}>
-                        <td className="px-4 py-3">
-                          <img
-                            src={project.image_url}
-                            alt={project.alt || project.title}
-                            className="h-12 w-16 rounded-md object-cover"
-                          />
-                        </td>
-                        <td className="px-4 py-3 font-medium text-navy">{project.title}</td>
-                        <td className="px-4 py-3 text-ink/70">{project.category}</td>
-                        <td className="px-4 py-3 text-ink/70">{project.display_order}</td>
-                        <td className="px-4 py-3">
-                          {project.featured && <Star size={16} className="text-gold" aria-hidden="true" />}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditForm(project)}
-                              className="rounded-md p-2 text-navy/70 hover:bg-navy/5 hover:text-navy"
-                              aria-label={`Edit ${project.title}`}
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(project)}
-                              disabled={deletingId === project.id}
-                              className="rounded-md p-2 text-red-500 hover:bg-red-50"
-                              aria-label={`Delete ${project.title}`}
-                            >
-                              {deletingId === project.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <Trash2 size={16} />
-                              )}
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* Tablet/desktop: table. The old version wrapped this in
+                    overflow-hidden, which silently clipped the Actions
+                    column off-screen on phones with no way to reach it —
+                    overflow-x-auto here is just a defensive backstop now
+                    that phones get their own card layout below. */}
+                <div className="hidden overflow-x-auto rounded-xl border border-navy/10 bg-white md:block">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-navy/10 bg-navy/5 text-xs uppercase tracking-wide text-navy/60">
+                      <tr>
+                        <th className="px-4 py-3">Image</th>
+                        <th className="px-4 py-3">Title</th>
+                        <th className="px-4 py-3">Category</th>
+                        <th className="px-4 py-3">Order</th>
+                        <th className="px-4 py-3">Featured</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-navy/5">
+                      {projects.map((project) => (
+                        <tr key={project.id}>
+                          <td className="px-4 py-3">
+                            <img
+                              src={project.image_url}
+                              alt={project.alt || project.title}
+                              className="h-12 w-16 rounded-md object-cover"
+                            />
+                          </td>
+                          <td className="px-4 py-3 font-medium text-navy">{project.title}</td>
+                          <td className="px-4 py-3 text-ink/70">{project.category}</td>
+                          <td className="px-4 py-3 text-ink/70">{project.display_order}</td>
+                          <td className="px-4 py-3">
+                            {project.featured && <Star size={16} className="text-gold" aria-hidden="true" />}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditForm(project)}
+                                className="rounded-md p-2 text-navy/70 hover:bg-navy/5 hover:text-navy"
+                                aria-label={`Edit ${project.title}`}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(project)}
+                                disabled={deletingId === project.id}
+                                className="rounded-md p-2 text-red-500 hover:bg-red-50"
+                                aria-label={`Delete ${project.title}`}
+                              >
+                                {deletingId === project.id ? (
+                                  <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                  <Trash2 size={16} />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Phone: stacked cards, one per project, with Edit as the
+                    prominent full-width action and Delete kept small and
+                    separate so it can't be tapped by accident. */}
+                <div className="grid grid-cols-1 gap-3 md:hidden">
+                  {projects.map((project) => (
+                    <div key={project.id} className="card p-4">
+                      <div className="flex gap-3">
+                        <img
+                          src={project.image_url}
+                          alt={project.alt || project.title}
+                          className="h-16 w-20 shrink-0 rounded-md object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium text-navy">{project.title}</p>
+                          <p className="mt-0.5 truncate text-sm text-ink/60">{project.category}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink/50">
+                            <span>Order: {project.display_order}</span>
+                            {project.featured && (
+                              <span className="inline-flex items-center gap-1 text-gold-dark">
+                                <Star size={12} aria-hidden="true" />
+                                Featured
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(project)}
+                          className="btn-primary flex-1 text-sm"
+                        >
+                          <Pencil size={16} aria-hidden="true" />
+                          Edit Project
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(project)}
+                          disabled={deletingId === project.id}
+                          className="rounded-md border border-red-200 px-3 text-red-500 hover:bg-red-50"
+                          aria-label={`Delete ${project.title}`}
+                        >
+                          {deletingId === project.id ? (
+                            <Loader2 size={18} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={18} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
