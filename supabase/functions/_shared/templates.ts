@@ -1,6 +1,12 @@
 // Pure email template builders — no network calls, no provider-specific
 // code. Kept separate from email-provider.ts so the transactional email
 // provider can be swapped later without touching any wording/design here.
+//
+// Shared between submit-enquiry (sends the notification synchronously,
+// right after the database insert that creates it) and send-enquiry-email
+// (kept working as a standalone function for manually retrying a specific
+// enquiry whose notification_sent_at is still null — see its own file for
+// why it still exists).
 
 export interface EnquiryRecord {
   id: string

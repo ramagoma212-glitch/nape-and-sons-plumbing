@@ -1,38 +1,53 @@
 // Supabase Edge Function — the ONLY server-side path that may write to
-// public.enquiries once supabase/migrations/008_secure_enquiry_submission.sql
-// has been run. Until that migration runs, this function and the legacy
-// anonymous direct-insert path are both valid simultaneously, which is what
-// makes a zero-downtime cutover possible — see README.md, "Turnstile
-// Anti-Spam", "Activation sequence".
+// public.enquiries now that supabase/migrations/008_secure_enquiry_submission.sql
+// has been applied.
 //
 // Flow: request shape/field validation -> Cloudflare Turnstile siteverify
 // -> insert into public.enquiries using the service role key (bypasses
-// RLS, so this keeps working whether or not the anonymous insert policy
-// still exists). The honeypot is consulted only as a fallback when
-// Turnstile fails — see the comment above that check for why.
+// RLS) -> business email notification -> mark notification_sent_at ->
+// customer acknowledgement (if an email was supplied). The honeypot is
+// consulted only as a fallback when Turnstile fails — see the comment
+// above that check for why.
 //
-// Required secret (configure via `supabase secrets set TURNSTILE_SECRET_KEY=...`,
-// never in frontend code, .env.local, or Netlify): TURNSTILE_SECRET_KEY
+// Email is sent synchronously, in-process, right here — not via a
+// Database Webhook. Supabase's Dashboard webhook feature failed on this
+// project ("schema supabase_functions does not exist"), and hand-building
+// that infrastructure (pg_net trigger, custom http_request function) was
+// deliberately avoided rather than reverse-engineering an unsupported
+// substitute on production. This is simpler anyway: the row we just
+// inserted is already in memory, so there's nothing to look up and no
+// separate retry/duplicate-delivery model to guard against.
+//
+// Email is strictly best-effort and can never affect the customer-facing
+// result: the row is already durably saved by the time any email code
+// runs, and every email-related step below is wrapped so a failure there
+// only ever affects logging and notification_sent_at, never the response
+// or the row itself. supabase/functions/send-enquiry-email remains
+// available as a manual retry tool for a specific row whose
+// notification_sent_at is still null.
+//
+// Required secrets (configure via `supabase secrets set NAME=...`, never
+// in frontend code, .env.local, or Netlify):
+//   TURNSTILE_SECRET_KEY
+//   RESEND_API_KEY
 //
 // Automatically provided to every Supabase Edge Function without manual
 // configuration: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. The service-role
 // key is used here ONLY inside this server-side function to perform the
-// insert — it is never returned in any response and never reaches the
-// browser.
+// insert and the notification_sent_at update — it is never returned in
+// any response and never reaches the browser.
 //
 // Privacy: nothing logged below includes full_name, phone, email, message,
-// or the Turnstile token itself. Only generic reason codes and Cloudflare's
-// own error codes are logged, for diagnosis without exposing customer data.
-//
-// This function inserts into the SAME public.enquiries table the prepared
-// (not yet active) send-enquiry-email webhook watches — it does not call
-// Resend directly and does not know that system exists, keeping the two
-// concerns fully separated.
+// or the Turnstile token. Only generic reason codes, Cloudflare's own
+// error codes, and Postgres error codes are logged, for diagnosis without
+// exposing customer data.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from './cors.ts'
 import { validateEnquiry } from './validation.ts'
 import { verifyTurnstileToken } from './turnstile.ts'
+import { buildBusinessEmail, buildCustomerEmail, type EnquiryRecord } from '../_shared/templates.ts'
+import { sendEmail, isEmailProviderConfigured } from '../_shared/email-provider.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -98,23 +113,67 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-  const { error } = await supabase.from('enquiries').insert({
-    full_name: enquiry.fullName,
-    phone: enquiry.phone,
-    email: enquiry.email,
-    service: enquiry.service,
-    location: enquiry.location,
-    message: enquiry.message,
-    enquiry_type: enquiry.enquiryType,
-    preferred_date: enquiry.preferredDate,
-    preferred_time: enquiry.preferredTime,
-    status: 'new',
-  })
+  const { data: inserted, error } = await supabase
+    .from('enquiries')
+    .insert({
+      full_name: enquiry.fullName,
+      phone: enquiry.phone,
+      email: enquiry.email,
+      service: enquiry.service,
+      location: enquiry.location,
+      message: enquiry.message,
+      enquiry_type: enquiry.enquiryType,
+      preferred_date: enquiry.preferredDate,
+      preferred_time: enquiry.preferredTime,
+      status: 'new',
+    })
+    .select()
+    .single()
 
-  if (error) {
+  if (error || !inserted) {
     // Postgres error details stay server-side only.
-    console.error('submit-enquiry: insert failed', error.code)
+    console.error('submit-enquiry: insert failed', error?.code)
     return jsonResponse({ ok: false, reason: 'server' }, 500, origin)
+  }
+
+  // From here on the enquiry is durably saved — nothing below can ever
+  // lose it or roll it back. Email is best-effort only.
+  if (isEmailProviderConfigured()) {
+    let businessOk = false
+    try {
+      await sendEmail(buildBusinessEmail(inserted as EnquiryRecord))
+      businessOk = true
+    } catch (businessError) {
+      console.error('submit-enquiry: business notification failed', businessError)
+    }
+
+    if (businessOk) {
+      // Only mark notified after the business email actually succeeded —
+      // if this update itself fails, notification_sent_at correctly stays
+      // null and send-enquiry-email can be used to retry this row later.
+      try {
+        await supabase
+          .from('enquiries')
+          .update({ notification_sent_at: new Date().toISOString() })
+          .eq('id', inserted.id)
+      } catch (updateError) {
+        console.error('submit-enquiry: could not mark notification_sent_at', updateError)
+      }
+
+      const customerEmail = buildCustomerEmail(inserted as EnquiryRecord)
+      if (customerEmail) {
+        try {
+          await sendEmail(customerEmail)
+        } catch (customerError) {
+          // The business notification already succeeded and is already
+          // marked — a failed acknowledgement here is logged only and
+          // never affects the row or the response.
+          console.error('submit-enquiry: customer acknowledgement failed', customerError)
+        }
+      }
+    }
+  } else {
+    console.error('submit-enquiry: RESEND_API_KEY is not configured — enquiry saved, no email sent')
   }
 
   return jsonResponse({ ok: true }, 200, origin)

@@ -1,15 +1,16 @@
 // Supabase Edge Function — sends a business notification email, and (if the
-// customer supplied an email address) a customer confirmation email,
-// whenever a new row is inserted into public.enquiries.
+// customer supplied an email address) a customer confirmation email, for a
+// given enquiry.
 //
-// NOT ACTIVE YET. This function is prepared but not deployed or wired to a
-// Database Webhook. See README.md, "Email Notification System" section, for
-// the exact activation steps once napeandsonsplumbing.co.za is verified.
+// NOT the primary send path anymore. submit-enquiry now sends notifications
+// itself, synchronously, right after the database insert that creates each
+// enquiry — no Database Webhook is used (Supabase's Dashboard webhook
+// feature failed on this project with "schema supabase_functions does not
+// exist", and hand-building that infrastructure was deliberately avoided).
 //
-// Trigger (once configured): a Supabase Database Webhook on
-// public.enquiries, event INSERT, calling this function's URL. Supabase
-// webhooks POST a payload shaped like:
-//   { type: "INSERT", table: "enquiries", schema: "public", record: {...} }
+// This function is kept as a manual-retry tool: if a specific enquiry's
+// notification_sent_at is still null (submit-enquiry's own send attempt
+// failed), invoke this function directly with that row's data to retry.
 //
 // Required secret (configure via `supabase secrets set RESEND_API_KEY=...`,
 // never in frontend code, .env.local, or Netlify): RESEND_API_KEY
@@ -21,13 +22,13 @@
 // the browser.
 //
 // Failure philosophy: the customer's enquiry is already durably saved in
-// Supabase by the time this function runs at all (the webhook fires after
-// the insert commits), so nothing here can ever lose a customer enquiry —
-// worst case, no email goes out and the failure is logged for diagnosis.
+// Supabase by the time this function is invoked for it, so nothing here can
+// ever lose a customer enquiry — worst case, no email goes out and the
+// failure is logged for diagnosis.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { buildBusinessEmail, buildCustomerEmail, type EnquiryRecord } from './templates.ts'
-import { sendEmail, isEmailProviderConfigured } from './email-provider.ts'
+import { buildBusinessEmail, buildCustomerEmail, type EnquiryRecord } from '../_shared/templates.ts'
+import { sendEmail, isEmailProviderConfigured } from '../_shared/email-provider.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -49,10 +50,9 @@ Deno.serve(async (req: Request) => {
     return new Response('Missing enquiry record in payload', { status: 400 })
   }
 
-  // Idempotency guard against duplicate webhook deliveries for the same
-  // row. Requires the optional notification_sent_at column — see
-  // supabase/migrations/007_enquiry_notification_tracking.sql. Safe no-op
-  // if that column doesn't exist yet: it will simply be undefined here.
+  // Idempotency guard: refuse to re-send for a row that's already marked
+  // notified, e.g. if this is invoked manually more than once for the same
+  // row by mistake.
   if ((enquiry as Record<string, unknown>).notification_sent_at) {
     return new Response('Already notified', { status: 200 })
   }
@@ -87,15 +87,14 @@ Deno.serve(async (req: Request) => {
 
   if (!businessOk || !customerOk) {
     // Deliberately not marking notification_sent_at, and returning a
-    // non-2xx status so Supabase's built-in webhook retry (a small number
-    // of attempts with backoff) can retry transient provider failures,
-    // rather than building custom retry logic here.
+    // non-2xx status, so whoever invokes this manually for a retry can see
+    // it didn't fully succeed and try again later.
     //
-    // Tradeoff: on retry, whichever email already succeeded (business or
-    // customer) may be sent a second time. Accepted for simplicity — if
-    // duplicate emails become a real problem in practice, track business
-    // and customer notification status as two separate columns instead of
-    // this single notification_sent_at timestamp.
+    // Tradeoff: on a manual retry, whichever email already succeeded
+    // (business or customer) may be sent a second time. Accepted for
+    // simplicity — if that becomes a real problem in practice, track
+    // business and customer notification status as two separate columns
+    // instead of this single notification_sent_at timestamp.
     return new Response(JSON.stringify({ businessOk, customerOk }), { status: 502 })
   }
 
@@ -104,8 +103,8 @@ Deno.serve(async (req: Request) => {
       const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
       await supabase.from('enquiries').update({ notification_sent_at: new Date().toISOString() }).eq('id', enquiry.id)
     } catch (error) {
-      // Non-fatal: worst case a future duplicate webhook delivery re-sends
-      // these emails once more.
+      // Non-fatal: worst case a future manual retry re-sends these emails
+      // once more.
       console.error('send-enquiry-email: could not mark notification_sent_at', error)
     }
   }

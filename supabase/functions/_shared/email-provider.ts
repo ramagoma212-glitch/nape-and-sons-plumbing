@@ -1,14 +1,14 @@
 // Resend-specific implementation, isolated in this one file so a different
 // transactional email provider could be swapped in later without touching
-// templates.ts or index.ts.
+// templates.ts or the functions that call sendEmail().
 //
 // The API key is read ONLY from a Supabase Edge Function secret via
 // Deno.env — never from frontend code, never from a VITE_ variable, never
-// committed to this repository. Configure it later with:
+// committed to this repository. Configure it with:
 //   supabase secrets set RESEND_API_KEY=<real-key>
 // This file does not require a real key to exist for the site to build or
 // run — isEmailProviderConfigured() lets callers fail safely when it's
-// absent (e.g. this function hasn't been deployed/configured yet).
+// absent.
 
 import type { OutgoingEmail } from './templates.ts'
 
