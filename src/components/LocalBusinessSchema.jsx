@@ -19,9 +19,10 @@ export default function LocalBusinessSchema() {
     logo: `${SITE_URL}/logo.png`,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: business.address,
-      addressRegion: 'Limpopo',
-      addressCountry: 'ZA',
+      streetAddress: business.addressParts.streetAddress,
+      addressLocality: business.addressParts.addressLocality,
+      addressRegion: business.addressParts.addressRegion,
+      addressCountry: business.addressParts.addressCountry,
     },
     areaServed: business.areas,
   }

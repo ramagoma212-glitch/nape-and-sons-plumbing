@@ -10,7 +10,22 @@ export const business = {
   whatsappNumber: '27662045866',
   email: 'napeandsons@gmail.com',
   emailHref: 'mailto:napeandsons@gmail.com',
-  address: 'Stand 400 Moletjie Ceres',
+  address: '14 - 16 148th Street, Honeymoon Residence, Seshego-G, Polokwane, Limpopo',
+  // Same address broken into display lines for layouts that present it as
+  // a short block (e.g. the Contact page's Location card) rather than one
+  // flowing line.
+  addressLines: ['14 - 16 148th Street', 'Honeymoon Residence', 'Seshego-G', 'Polokwane, Limpopo'],
+  // Structured components for LocalBusinessSchema's PostalAddress. No
+  // postal code or coordinates are included since none have been verified.
+  addressParts: {
+    streetAddress: '14 - 16 148th Street, Honeymoon Residence, Seshego-G',
+    addressLocality: 'Polokwane',
+    addressRegion: 'Limpopo',
+    addressCountry: 'ZA',
+  },
+  // Service/coverage areas — deliberately separate from the physical
+  // address above. Changing the business's street address does not change
+  // where it operates.
   areas: ['Polokwane', 'Limpopo', 'Pretoria', 'Johannesburg'],
   headline: 'Reliable Plumbing Solutions Across Limpopo, Pretoria & Johannesburg',
   supportingCopy:

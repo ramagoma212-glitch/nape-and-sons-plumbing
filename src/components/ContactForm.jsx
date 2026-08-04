@@ -107,18 +107,22 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     event.preventDefault()
     if (status === 'submitting') return
 
-    // Honeypot: real visitors never see or fill this field, but browser
-    // autofill sometimes silently does. It is only trusted as a bot signal
-    // when there is no Turnstile token yet — once Turnstile has completed,
-    // that is the stronger signal, and the submission must go through to
-    // the server (which re-checks Turnstile authoritatively) rather than
-    // being silently discarded here. A honeypot fill with no token at all
-    // still gets the instant fake-success bot trap, with zero request.
-    if (form.company.trim() && !turnstileToken) {
+    // Honeypot: this is a LEGACY fallback only, for the rare case Turnstile
+    // isn't configured at all (e.g. a local build with no
+    // VITE_TURNSTILE_SITE_KEY — never true in production). Once Turnstile
+    // is configured, a filled honeypot is never, on its own, a client-side
+    // reason to discard a submission — production evidence showed browser
+    // autofill can populate this hidden field for a genuine,
+    // Turnstile-verified human, and silently dropping their enquiry is
+    // exactly the bug this fixes. The server (submit-enquiry) remains the
+    // real authority: it treats a filled honeypot as a bot signal ONLY
+    // when Turnstile itself also fails, and always proceeds to a real
+    // insert when Turnstile passes, regardless of the honeypot.
+    if (form.company.trim() && !isTurnstileConfigured) {
       if (import.meta.env.DEV) {
         // Diagnostic only — never logs the field's value, and never runs
         // in production, so this can't leak into customer-facing consoles.
-        console.warn('Honeypot triggered (no Turnstile token) — treating submission as a bot.')
+        console.warn('Honeypot triggered (Turnstile not configured) — treating submission as a bot.')
       }
       setStatus('success')
       setForm(EMPTY_FORM)
@@ -129,7 +133,18 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
-    if (isTurnstileConfigured && !turnstileToken) {
+    // React state (turnstileToken) is the primary source. Cloudflare's own
+    // hidden input is a defensive fallback: it's populated by Cloudflare's
+    // script directly and independently of our onVerify callback, so it
+    // stays correct even in the rare case that callback's state update
+    // doesn't make it into this closure before submit — which is exactly
+    // what production evidence showed (a genuine 773-character token
+    // sitting in the DOM while turnstileToken was still null). Never
+    // logged, never exposed beyond this one read.
+    const domTurnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value || ''
+    const effectiveTurnstileToken = turnstileToken || domTurnstileToken
+
+    if (isTurnstileConfigured && !effectiveTurnstileToken) {
       setTurnstileMessage('Please complete the security check and try again.')
       return
     }
@@ -138,7 +153,7 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     setStatus('submitting')
     if (import.meta.env.DEV) console.warn('Calling submit-enquiry...')
     try {
-      await submitEnquiry({ ...form, enquiryType, turnstileToken })
+      await submitEnquiry({ ...form, enquiryType, turnstileToken: effectiveTurnstileToken })
       if (import.meta.env.DEV) console.warn('submit-enquiry succeeded.')
       setStatus('success')
       setForm(EMPTY_FORM)

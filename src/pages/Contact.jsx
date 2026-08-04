@@ -7,7 +7,7 @@ import PhoneButton from '../components/PhoneButton'
 import WhatsAppButton from '../components/WhatsAppButton'
 import { business } from '../data/business'
 
-const mapsQuery = encodeURIComponent(`${business.address}, Limpopo, South Africa`)
+const mapsQuery = encodeURIComponent(`${business.address}, South Africa`)
 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`
 
 const TABS = [
@@ -91,7 +91,14 @@ export default function Contact() {
 
             <div className="card p-6 sm:p-7">
               <h2 className="text-lg font-semibold text-navy font-heading">Location</h2>
-              <p className="mt-3 text-sm text-ink/70">{business.address}</p>
+              <p className="mt-3 break-words text-sm leading-relaxed text-ink/70">
+                {business.addressLines.map((line, index) => (
+                  <span key={line}>
+                    {line}
+                    {index < business.addressLines.length - 1 && <br />}
+                  </span>
+                ))}
+              </p>
               <a
                 href={mapsUrl}
                 target="_blank"
