@@ -41,10 +41,13 @@ export function validateEnquiry(body: unknown): { ok: true; value: EnquiryInput 
 
   const input = body as Record<string, unknown>
 
-  // Honeypot short-circuit: shape doesn't matter once we know this is a bot.
-  if (typeof input.company === 'string' && input.company.trim().length > 0) {
-    return { ok: true, value: { ...input, company: input.company } as EnquiryInput }
-  }
+  // The honeypot no longer short-circuits validation here. A filled
+  // honeypot is no longer proof of a bot on its own — real visitors can
+  // have this hidden field silently populated by browser autofill — so
+  // every submission is validated normally regardless of it, and the
+  // actual honeypot value is carried through (see `company` below) for
+  // index.ts to weigh only AFTER Turnstile has been checked, where a
+  // passing Turnstile result is treated as the stronger signal.
 
   if (!isNonEmptyString(input.enquiryType, 20) || !ENQUIRY_TYPES.includes(input.enquiryType as string)) {
     return { ok: false, reason: 'invalid_enquiry_type' }
@@ -92,7 +95,7 @@ export function validateEnquiry(body: unknown): { ok: true; value: EnquiryInput 
       preferredDate: input.enquiryType === 'booking' ? (input.preferredDate as string) : null,
       preferredTime: input.enquiryType === 'booking' ? (input.preferredTime as string) : null,
       turnstileToken: input.turnstileToken as string,
-      company: '',
+      company: typeof input.company === 'string' ? input.company : '',
     },
   }
 }

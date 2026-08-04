@@ -107,11 +107,19 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     event.preventDefault()
     if (status === 'submitting') return
 
-    // Honeypot: real visitors never see or fill this field. If it has a
-    // value, silently treat the submission as successful without ever
-    // touching the database, so automated bots get no signal that anything
-    // was rejected.
-    if (form.company.trim()) {
+    // Honeypot: real visitors never see or fill this field, but browser
+    // autofill sometimes silently does. It is only trusted as a bot signal
+    // when there is no Turnstile token yet — once Turnstile has completed,
+    // that is the stronger signal, and the submission must go through to
+    // the server (which re-checks Turnstile authoritatively) rather than
+    // being silently discarded here. A honeypot fill with no token at all
+    // still gets the instant fake-success bot trap, with zero request.
+    if (form.company.trim() && !turnstileToken) {
+      if (import.meta.env.DEV) {
+        // Diagnostic only — never logs the field's value, and never runs
+        // in production, so this can't leak into customer-facing consoles.
+        console.warn('Honeypot triggered (no Turnstile token) — treating submission as a bot.')
+      }
       setStatus('success')
       setForm(EMPTY_FORM)
       return
@@ -128,8 +136,10 @@ export default function ContactForm({ enquiryType = 'quote' }) {
 
     setTurnstileMessage('')
     setStatus('submitting')
+    if (import.meta.env.DEV) console.warn('Calling submit-enquiry...')
     try {
       await submitEnquiry({ ...form, enquiryType, turnstileToken })
+      if (import.meta.env.DEV) console.warn('submit-enquiry succeeded.')
       setStatus('success')
       setForm(EMPTY_FORM)
       resetTurnstile()
@@ -162,23 +172,27 @@ export default function ContactForm({ enquiryType = 'quote' }) {
     <form onSubmit={handleSubmit} noValidate className="card space-y-5 p-6 sm:p-8">
       {/* Honeypot field: hidden from sighted users and unreachable by tab,
           but visible to naive bots that auto-fill every input. The field's
-          name/id is deliberately non-semantic (no "company", "organization",
-          "name", "website" etc.) and carries no <label> — real browsers'
-          autofill (e.g. Chrome's saved "Organization" value) matches fields
-          by exactly that kind of semantic name/label, not by whether the
-          field is visually on-screen, so a recognisable name here was
-          silently autofilling this field for real human visitors and
-          triggering the bot-trap's fake-success path on their genuine
-          submissions. See git history for the incident this fixed. */}
+          name/id is deliberately non-semantic and carries no <label> —
+          browser autofill matches fields by name/label semantics (and,
+          for Chrome specifically, sometimes by an ML-based classification
+          of the whole form rather than a strict keyword match), not by
+          whether the field is visually on-screen. A previous name here
+          ("company") was a direct keyword match and got silently
+          autofilled for real visitors; renamed once already and now
+          renamed again to a value with no resemblance to any real form
+          field, since the exact autofill trigger inside Chrome's
+          heuristics isn't something we can fully verify from outside the
+          browser. See git history for the incidents this addressed. */}
       <div className="absolute left-[-9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
         <input
-          id="nape_hp_1x9"
-          name="nape_hp_1x9"
+          id="contact_reference_check"
+          name="contact_reference_check"
           type="text"
           tabIndex={-1}
           autoComplete="off"
           data-lpignore="true"
           data-form-type="other"
+          data-1p-ignore="true"
           value={form.company}
           // Deliberately not the shared handleChange: that keys off
           // event.target.name (the DOM attribute renamed above to avoid

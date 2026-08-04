@@ -5,10 +5,11 @@
 // makes a zero-downtime cutover possible — see README.md, "Turnstile
 // Anti-Spam", "Activation sequence".
 //
-// Flow: honeypot check -> request shape/field validation -> Cloudflare
-// Turnstile siteverify -> insert into public.enquiries using the service
-// role key (bypasses RLS, so this keeps working whether or not the
-// anonymous insert policy still exists).
+// Flow: request shape/field validation -> Cloudflare Turnstile siteverify
+// -> insert into public.enquiries using the service role key (bypasses
+// RLS, so this keeps working whether or not the anonymous insert policy
+// still exists). The honeypot is consulted only as a fallback when
+// Turnstile fails — see the comment above that check for why.
 //
 // Required secret (configure via `supabase secrets set TURNSTILE_SECRET_KEY=...`,
 // never in frontend code, .env.local, or Netlify): TURNSTILE_SECRET_KEY
@@ -68,18 +69,26 @@ Deno.serve(async (req: Request) => {
   }
 
   const enquiry = validated.value
+  const honeypotFilled = Boolean(enquiry.company && enquiry.company.trim().length > 0)
 
-  // Honeypot: a filled hidden field means this wasn't a real visitor.
-  // Respond exactly as if it succeeded, without verifying Turnstile or
-  // touching the database, so bots get no signal that anything was
-  // rejected.
-  if (enquiry.company && enquiry.company.trim().length > 0) {
-    return jsonResponse({ ok: true }, 200, origin)
-  }
-
+  // Turnstile is checked FIRST and is the authoritative signal — a filled
+  // honeypot alone no longer rejects anything. Real visitors can have this
+  // hidden field silently populated by browser autofill, so a passing
+  // Turnstile result must never be silently discarded just because the
+  // honeypot also has a value. See git history for the incident this
+  // addressed.
   const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
   const turnstileResult = await verifyTurnstileToken(enquiry.turnstileToken as string, remoteIp)
   if (!turnstileResult.ok) {
+    // Turnstile did not pass. If the honeypot is ALSO filled, this matches
+    // a simple bot closely enough to respond with a fake success and skip
+    // the insert, exactly as before — bots get no signal anything was
+    // rejected. If the honeypot is empty, this is very likely a genuine
+    // visitor whose verification genuinely failed or expired, so they get
+    // the real customer-facing error instead, never a silent fake success.
+    if (honeypotFilled) {
+      return jsonResponse({ ok: true }, 200, origin)
+    }
     return jsonResponse({ ok: false, reason: 'turnstile' }, 403, origin)
   }
 
