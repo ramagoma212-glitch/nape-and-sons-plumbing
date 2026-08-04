@@ -110,6 +110,11 @@ export default function PlumberPolokwane() {
               <ServiceCard key={service.slug} service={service} />
             ))}
           </div>
+          <p className="mt-8 text-center text-sm text-ink/60">
+            <Link to="/services" className="font-medium text-gold-dark underline">
+              See our full range of plumbing services
+            </Link>
+          </p>
         </div>
       </section>
 

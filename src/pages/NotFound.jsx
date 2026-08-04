@@ -30,8 +30,12 @@ export default function NotFound() {
             Or visit{' '}
             <Link to="/services" className="font-medium text-gold-dark underline">
               Services
-            </Link>{' '}
-            or{' '}
+            </Link>
+            ,{' '}
+            <Link to="/projects" className="font-medium text-gold-dark underline">
+              Projects
+            </Link>
+            , or{' '}
             <Link to="/contact" className="font-medium text-gold-dark underline">
               Contact
             </Link>
