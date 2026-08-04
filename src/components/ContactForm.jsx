@@ -88,6 +88,13 @@ export default function ContactForm({ enquiryType = 'quote' }) {
   const [turnstileToken, setTurnstileToken] = useState(null)
   const [turnstileMessage, setTurnstileMessage] = useState('')
   const turnstileRef = useRef(null)
+  // A synchronous guard, separate from the `status` state: two click events
+  // dispatched in the same tick (a fast double-tap, or two near-simultaneous
+  // input methods) can both invoke handleSubmit before React has re-rendered
+  // with the first call's setStatus('submitting') — `status` in that second
+  // call's closure is still 'idle'. A ref updates immediately and is shared
+  // across both closures, so it can't be raced the same way.
+  const submittingRef = useRef(false)
   const copy = COPY[enquiryType] || COPY.quote
 
   function handleChange(event) {
@@ -105,7 +112,7 @@ export default function ContactForm({ enquiryType = 'quote' }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (status === 'submitting') return
+    if (status === 'submitting' || submittingRef.current) return
 
     // Honeypot: this is a LEGACY fallback only, for the rare case Turnstile
     // isn't configured at all (e.g. a local build with no
@@ -149,6 +156,10 @@ export default function ContactForm({ enquiryType = 'quote' }) {
       return
     }
 
+    // Set synchronously, before the first await, so a second click event
+    // arriving in the same tick (before React re-renders `status`) is still
+    // caught by the check at the top of this function.
+    submittingRef.current = true
     setTurnstileMessage('')
     setStatus('submitting')
     if (import.meta.env.DEV) console.warn('Calling submit-enquiry...')
@@ -165,6 +176,8 @@ export default function ContactForm({ enquiryType = 'quote' }) {
       )
       setStatus('error')
       resetTurnstile()
+    } finally {
+      submittingRef.current = false
     }
   }
 
