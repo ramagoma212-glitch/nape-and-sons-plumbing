@@ -1,6 +1,27 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 
+// Known-good production origin, used only as a fallback when the browser's
+// own origin can't be trusted (see safeOrigin() below) — never as the
+// primary source, so localhost/Netlify preview testing is unaffected.
+const PRODUCTION_ORIGIN = 'https://napeandsonsplumbing.co.za'
+
+// window.location.origin is normally reliable, but it can literally be the
+// string "null" in a handful of real-world browsing contexts (a sandboxed
+// iframe without allow-same-origin, some in-app/webview browsers used by
+// email or social apps, file:// access). A password-reset redirectTo built
+// from that would send Supabase a link to "null/admin/reset-password" —
+// exactly the "null" / unreachable-link symptom reported from a real
+// production test. Guard against it here so the link sent to the owner's
+// inbox is always a real, reachable URL.
+function safeOrigin() {
+  const origin = window.location.origin
+  if (!origin || origin === 'null' || origin === 'undefined') {
+    return PRODUCTION_ORIGIN
+  }
+  return origin
+}
+
 const AuthContext = createContext({
   user: null,
   loading: true,
@@ -52,7 +73,7 @@ export function AuthProvider({ children }) {
     if (!isSupabaseConfigured) {
       return { error: 'Supabase is not configured. Add your environment variables first.' }
     }
-    const redirectTo = `${window.location.origin}/admin/reset-password`
+    const redirectTo = `${safeOrigin()}/admin/reset-password`
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     return { error: error?.message ?? null }
   }
