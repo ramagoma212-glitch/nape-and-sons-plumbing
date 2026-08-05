@@ -1,8 +1,14 @@
 import { Link } from 'react-router-dom'
-import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react'
+import { Phone, MessageCircle, Mail, MapPin, Facebook } from 'lucide-react'
 import { business } from '../data/business'
 import { services } from '../data/services'
 import logo from '../assets/brand/nape-and-sons-logo.png'
+import TikTokIcon from './icons/TikTokIcon'
+
+const SOCIAL_LINKS = [
+  { name: 'Facebook', href: business.social.facebook, Icon: Facebook },
+  { name: 'TikTok', href: business.social.tiktok, Icon: TikTokIcon },
+]
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -28,6 +34,20 @@ export default function Footer() {
             Professional plumbing services for homes and businesses across Limpopo, Pretoria and
             Johannesburg.
           </p>
+          <div className="mt-5 flex items-center gap-3">
+            {SOCIAL_LINKS.map(({ name, href, Icon }) => (
+              <a
+                key={name}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${business.name} on ${name}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-gold hover:text-gold"
+              >
+                <Icon size={16} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
         </div>
 
         <div>

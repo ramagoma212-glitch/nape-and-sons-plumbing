@@ -27,6 +27,13 @@ export const business = {
   // address above. Changing the business's street address does not change
   // where it operates.
   areas: ['Polokwane', 'Limpopo', 'Pretoria', 'Johannesburg'],
+  social: {
+    facebook: 'https://www.facebook.com/share/1UnHhszp16/',
+    // Canonical profile URL — the link supplied included TikTok's own
+    // share-tracking query params (?_r=1&_t=...), which aren't needed to
+    // reach the same profile.
+    tiktok: 'https://www.tiktok.com/@nape.and.sons.plu',
+  },
   headline: 'Reliable Plumbing Solutions Across Limpopo, Pretoria & Johannesburg',
   supportingCopy:
     'Fast, professional plumbing services for homes and businesses. Available for emergency plumbing, repairs, installations and maintenance.',
