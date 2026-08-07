@@ -2,10 +2,18 @@
 <html lang="en-ZA">
   <head>
     <meta charset="UTF-8" />
-    <!-- Multiple sizes, largest first: Google's favicon-in-search guidance
-         wants a square icon of at least 48x48 (ideally a 48px multiple) to
+    <!-- Plain /favicon.ico first: this is the conventional fallback path
+         browsers AND Google's crawler check independent of any <link> tag.
+         It didn't exist before (the file just didn't exist on disk, so
+         Netlify's SPA catch-all served index.html itself at that URL —
+         200 OK but Content-Type text/html, not an image), which is a
+         plausible reason Search kept showing a generic globe even though
+         the PNG declarations below were already correct. Multiple sizes
+         after it, largest first: Google's favicon-in-search guidance wants
+         a square icon of at least 48x48 (ideally a 48px multiple) to
          reliably pick one up for search results, not just the small
          browser-tab sizes. -->
+    <link rel="icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
